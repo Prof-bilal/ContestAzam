@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-08-25T16:52:17.007Z",
+        "reason": "UX UI GUIDE.md L128+L147 explicitly mandates Inter font as part of Notion/Linear/Proton design system"
+      }
+    ]
+  }
+}

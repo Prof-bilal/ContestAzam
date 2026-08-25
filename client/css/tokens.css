@@ -1,0 +1,98 @@
+/* EventSphere Design Tokens */
+/* Based on Notion/Linear/Proton restrained aesthetic */
+
+:root {
+  /* Grayscale (does 90% of the work) */
+  --bg-page: #F8F7FC;
+  --bg-surface: #FFFFFF;
+  --bg-muted: #F4F3F8;
+  --border-hairline: #ECEAF2;
+
+  --text-primary: #14121F;
+  --text-secondary: #6B6878;
+  --text-tertiary: #9C99A8;
+
+  /* The ONE brand color */
+  --accent-brand: #6D5AE0;
+  --accent-brand-bg: #F0EDFC;
+
+  /* Primary accent (for nav active state, primary buttons) */
+  --accent-primary: #14121F;
+  --accent-primary-text: #FFFFFF;
+
+  /* Status (small dots/text only) */
+  --status-success: #2FAE60;
+  --status-warning: #E0A526;
+  --status-danger: #E5484D;
+
+  /* Shadows (soft & tight) */
+  --shadow-card: 0 1px 2px rgba(20, 18, 31, 0.04), 0 4px 12px rgba(20, 18, 31, 0.06);
+  --shadow-card-hover: 0 2px 4px rgba(20, 18, 31, 0.06), 0 8px 20px rgba(20, 18, 31, 0.08);
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  /* Spacing (8px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+  --text-2xl: 40px;
+
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+
+  /* Layout */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* Category chips - flat pastels */
+  --chip-lavender: #B4A7F5;
+  --chip-pink: #F5A7D9;
+  --chip-mint: #7DE0C6;
+  --chip-peach: #F5B89A;
+  --chip-ice-blue: #A7D9F5;
+
+  /* Avatar colors */
+  --avatar-1: #6D5AE0;
+  --avatar-2: #2FAE60;
+  --avatar-3: #E0A526;
+  --avatar-4: #E5484D;
+  --avatar-5: #0091FF;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
