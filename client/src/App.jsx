@@ -3,7 +3,7 @@ import Navigation from './components/Navigation';
 import Landing from './pages/Landing';
 import Signup from './pages/Signup';
 import Login from './pages/Login';
-import AdminAuth from './pages/AdminAuth';
+import AdminLogin from './pages/AdminLogin';
 import ParticipantDashboard from './pages/ParticipantDashboard';
 import OrganizerDashboard from './pages/OrganizerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
@@ -20,9 +20,7 @@ function App() {
         {/* Auth Routes */}
         <Route path="/register" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-
-        {/* Admin Secret Route - Not linked anywhere */}
-        <Route path="/admin/auth" element={<AdminAuth />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
 
         {/* Dashboard Routes */}
         <Route path="/dashboard/participant" element={<ParticipantDashboard />} />
