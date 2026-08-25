@@ -1,5 +1,4 @@
 /* Navigation Component - Reference A Pattern */
-@import './tokens.css';
 
 .navbar {
   position: sticky;
@@ -144,6 +143,8 @@
   cursor: pointer;
   text-decoration: none;
   transition: background var(--duration-base);
+  display: inline-block;
+  text-align: center;
 }
 
 .nav-button-primary:hover {
@@ -161,6 +162,8 @@
   cursor: pointer;
   text-decoration: none;
   transition: background var(--duration-fast), border-color var(--duration-fast);
+  display: inline-block;
+  text-align: center;
 }
 
 .nav-button-secondary:hover {

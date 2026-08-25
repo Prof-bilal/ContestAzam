@@ -1,6 +1,8 @@
 /* EventSphere Design Tokens */
 /* Based on Notion/Linear/Proton restrained aesthetic */
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
 :root {
   /* Grayscale (does 90% of the work) */
   --bg-page: #F8F7FC;
@@ -83,6 +85,54 @@
   --avatar-3: #E0A526;
   --avatar-4: #E5484D;
   --avatar-5: #0091FF;
+}
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  color: var(--text-primary);
+  background: var(--bg-page);
+  line-height: 1.5;
+}
+
+/* Focus states - keyboard navigation */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(109, 90, 224, 0.3);
+}
+
+/* Utility classes */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+.container-narrow {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .container,
+  .container-narrow {
+    padding: 0 var(--space-4);
+  }
 }
 
 /* Reduced motion support */
