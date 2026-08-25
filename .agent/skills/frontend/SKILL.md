@@ -1,64 +1,80 @@
-# frontend/SKILL.md — Modify MVC/Razor Frontend
+# frontend/SKILL.md — Modify React SPA
 
 ## Purpose
 
-Guide agents to safely modify MVC Controllers, Razor Views, ViewModels, Layouts, JavaScript, and CSS.
+Guide agents to safely modify React components, pages, services, hooks, and styling.
 
 ## When To Use
 
-- Adding or modifying a view.
-- Changing controller actions that serve views.
-- Adding or modifying ViewModels.
-- Changing layouts, partials, or styles.
-- Adding JavaScript functionality.
+- Adding or modifying a React component.
+- Changing API call functions.
+- Modifying routing.
+- Adding new pages.
+- Changing styling or layout.
 
 ## Inputs
 
-- The view, controller, or ViewModel being modified.
+- The React file being modified.
 - `.agent/FRONTEND.md` for structure.
 - `.agent/CODE_STYLE.md` for conventions.
 
 ## Preconditions
 
-- Understand existing view structure.
-- Understand ViewModel patterns.
-- Read `_Layout.cshtml` and `_ViewImports.cshtml`.
+- Node.js 18+ installed.
+- React project in `EventSphere.React/`.
+- Read existing component patterns.
 
 ## Workflow
 
-1. **Identify the layer**: Controller action → ViewModel → View.
-2. **Read controller**: Understand what data is passed to the view.
-3. **Read ViewModel**: Check existing ViewModel or create new one.
-4. **Read view**: Understand existing Razor patterns.
-5. **Make change**: Controller → ViewModel → View (in that order).
-6. **Verify build**: `dotnet build`.
-7. **Test in browser**: Check rendering and form submissions.
+1. **Identify the layer**: Page component → reusable component → service → API call.
+2. **Read existing similar component**: Understand patterns.
+3. **Make change**: Component → service → types (in that order).
+4. **Type everything**: Use TypeScript interfaces for props and API responses.
+5. **Test in browser**: Verify rendering and API calls.
+6. **Run tests**: `npm test` in `EventSphere.React/`.
 
 ## Rules
 
-- **NEVER introduce React, Vue, Angular, Next.js, or SPA frameworks.**
-- Use Tag Helpers for URLs (`asp-controller`, `asp-action`).
-- Use ViewModels — never pass raw entities to views.
-- Keep business logic out of `.cshtml` files.
-- Use `[ValidateAntiForgeryToken]` on POST actions.
-- Use `TempData` for flash messages.
-- Use partials for repeated UI components.
-- Keep JavaScript minimal — prefer server-side rendering.
-- Use Bootstrap classes for styling.
-- Use `@Html.Raw()` only with trusted content.
+- **Functional components only** — no class components.
+- Use TypeScript (`.tsx` for components, `.ts` for logic).
+- Props must be typed with interfaces.
+- API calls go in `services/` directory.
+- Use Axios instance from `api/axios.ts`.
+- Handle loading and error states in UI.
+- Use `ProtectedRoute` for authenticated routes.
+- Never store JWT in plain JavaScript variables — use localStorage or httpOnly cookie.
+- Never use `dangerouslySetInnerHTML` with untrusted content.
+- Bootstrap for styling (react-bootstrap or CSS classes).
+
+## Project Structure
+
+```
+src/
+├── api/axios.ts           # Axios instance
+├── components/            # Reusable components
+│   ├── common/            # Navbar, Footer, Loader, ProtectedRoute
+│   ├── events/            # EventCard, EventForm
+│   └── ...
+├── pages/                 # Route pages
+├── services/              # API functions
+├── context/               # React Context
+├── hooks/                 # Custom hooks
+├── types/                 # TypeScript interfaces
+└── utils/                 # Helpers
+```
 
 ## Verification
 
 ```bash
-dotnet build
-dotnet run --project EventSphere.Web
+cd EventSphere.React
+npm run build    # TypeScript compiles
+npm test         # Tests pass
+npm run dev      # App runs in browser
 ```
-
-Visit pages in browser, verify forms submit correctly.
 
 ## Failure Handling
 
-- View not found → check folder structure matches controller name.
-- Model is null → check controller passes data to view.
-- Validation not working → check ViewModel annotations.
-- Form not submitting → check anti-forgery token.
+- TypeScript errors → fix type definitions.
+- Build fails → check imports, missing dependencies.
+- Component doesn't render → check props, state, routing.
+- API call fails → check Axios config, CORS, backend running.

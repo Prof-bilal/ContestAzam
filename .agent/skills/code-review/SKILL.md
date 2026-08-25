@@ -8,60 +8,43 @@ Guide agents to review code changes for correctness, security, and quality.
 
 - Before completing any task.
 - When reviewing PRs.
-- When asked to review code.
-
-## Inputs
-
-- Changed files (diff).
-- `.agent/AGENTS.md` for rules.
-- `.agent/SECURITY.md` for security.
 
 ## Review Checklist
 
 ### Correctness
-- [ ] Code does what it claims to do.
+- [ ] Code does what it claims.
 - [ ] Edge cases handled.
 - [ ] Error handling present.
-- [ ] No logic bugs.
 
 ### Architecture
-- [ ] Follows layered architecture (Controller → Service → Data).
-- [ ] Thin controllers.
-- [ ] Business logic in services.
-- [ ] No circular dependencies.
+- [ ] Backend: Controller → Service → Data.
+- [ ] Frontend: Page → Component → Service → API.
+- [ ] No business logic in controllers or React components.
+- [ ] DTOs used for API responses.
 
-### Security
+### Security (Both Layers)
 - [ ] No hardcoded secrets.
-- [ ] Authentication/authorization correct.
-- [ ] Input validated.
-- [ ] No SQL injection, XSS vectors.
-- [ ] CSRF protection on forms.
+- [ ] Auth/authorization correct.
+- [ ] Input validated (frontend + backend).
+- [ ] No XSS, SQL injection vectors.
 
 ### Performance
-- [ ] No N+1 queries (use `Include()`).
-- [ ] No unnecessary database calls.
-- [ ] Proper async/await usage.
-- [ ] No blocking calls.
+- [ ] No N+1 queries (backend `Include()`).
+- [ ] No unnecessary re-renders (React `memo`, `useMemo`).
+- [ ] Proper async/await.
 
 ### Maintainability
 - [ ] Follows existing patterns.
+- [ ] TypeScript types defined.
 - [ ] No duplicate code.
-- [ ] Clear naming.
-- [ ] Minimal complexity.
 
 ### Tests
-- [ ] Tests exist for new behavior.
-- [ ] Existing tests still pass.
-- [ ] Tests are meaningful (not just passing).
-
-### Breaking Changes
-- [ ] API backward compatibility maintained.
-- [ ] Database migrations are safe.
-- [ ] No silent behavior changes.
+- [ ] Backend tests exist for new API behavior.
+- [ ] Frontend tests exist for new components.
+- [ ] All tests pass.
 
 ## Rules
 
-- Prioritize real defects over stylistic preferences.
-- Be constructive, not critical.
-- Focus on what matters: correctness, security, performance.
-- If unsure, ask rather than assume.
+- Prioritize real defects over style.
+- Check both backend and frontend for full-stack changes.
+- Be constructive.

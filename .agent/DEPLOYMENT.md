@@ -2,74 +2,70 @@
 
 ## Build
 
+### Backend
 ```bash
-dotnet build EventSphere.sln --configuration Release
+dotnet publish EventSphere.Api/EventSphere.Api.csproj -c Release -o ./publish-api
 ```
 
-## Publish
-
+### Frontend
 ```bash
-dotnet publish EventSphere.Web/EventSphere.Web.csproj -c Release -o ./publish
+cd EventSphere.React
+npm run build
+# Output in dist/
 ```
 
 ## Configuration
 
-### Production appsettings.json
-- Connection string: environment variable or secrets manager.
-- JWT key: strong, unique, from environment variable.
-- Logging: structured provider (Serilog recommended).
+### Backend (API)
+- Connection string: environment variable.
+- JWT key: environment variable (strong, unique).
+- CORS: configure for production domain.
 
-### Environment Variables
-```
+```env
 ASPNETCORE_ENVIRONMENT=Production
 ConnectionStrings__DefaultConnection=Server=...;Database=EventSphereDb;...
 Jwt__Key=your-production-secret-key
+Cors__AllowedOrigins=https://yourdomain.com
 ```
 
-## SQL Server
+### Frontend (React)
+```env
+VITE_API_URL=https://api.yourdomain.com
+VITE_SIGNALR_URL=https://api.yourdomain.com/hubs/notifications
+```
 
-- Create production database.
-- Run EF Core migrations on deployment.
-- Seed admin account.
+## Deployment Targets
+
+| Component | Recommended | Alternatives |
+|---|---|---|
+| API | Azure App Service | IIS, Docker, AWS ECS |
+| React | Vercel / Netlify | Azure Static Web Apps, S3+CloudFront |
+| Database | Azure SQL | AWS RDS, on-premise SQL Server |
+
+## Database
 
 ```bash
-dotnet ef database update --project EventSphere.Web
+dotnet ef database update --project EventSphere.Api
 ```
 
 ## Health Checks
 
 Not currently implemented. Recommended:
-- `/health` endpoint.
+- `/health` endpoint on API.
 - Database connectivity check.
-- SQL Server dependency.
-
-## Logging
-
-- Use Serilog or Application Insights in production.
-- Never log sensitive data.
-- Configure log levels via configuration.
-
-## Monitoring
-
-- Application performance monitoring (APM).
-- Error tracking (Sentry, Application Insights).
-- Database performance monitoring.
 
 ## Rollback
 
-1. Keep previous version published.
+1. Keep previous version available.
 2. Database migrations must be backward-compatible.
 3. Rollback by deploying previous version.
-4. Revert migrations only if safe.
 
 ## Current vs Recommended
 
 | Aspect | Current | Recommended |
 |---|---|---|
-| Build | Manual `dotnet publish` | CI/CD pipeline |
-| Database | Manual migration | Automated migration on deploy |
-| Secrets | appsettings.json | Azure Key Vault / Environment |
-| Logging | Console | Serilog + central sink |
+| API Deploy | Manual publish | CI/CD pipeline |
+| Frontend Deploy | Manual build | Vercel/Netlify auto-deploy |
+| Database | Manual migration | Automated on deploy |
+| Secrets | appsettings.json | Azure Key Vault / Env vars |
 | Monitoring | None | Application Insights |
-| Health Checks | None | `/health` endpoint |
-| HTTPS | Developer certs | Production certificate |

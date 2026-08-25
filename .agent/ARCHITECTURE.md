@@ -2,145 +2,148 @@
 
 ## Overview
 
-EventSphere is a **monolithic ASP.NET Core 8 full-stack application** with MVC for server-rendered frontend and Web API for client/consumer endpoints.
+EventSphere is a **decoupled full-stack application** with a React SPA frontend and ASP.NET Core Web API backend, communicating over HTTP/JSON.
 
 ## Architecture Style
 
-**Layered Monolith** with clear separation:
+**Client-Server Architecture** with clear separation:
 
 ```
-Presentation Layer
-├── ASP.NET Core MVC (Razor Views) — browser frontend
-└── ASP.NET Core Web API — API consumers
-
-Application Layer
-└── Service classes (business logic)
-
-Data Access Layer
-├── Entity Framework Core (DbContext)
-└── SQL Server
+React SPA (Frontend)          ASP.NET Core Web API (Backend)
+├── React 18+                 ├── Controllers (API only)
+├── React Router              ├── Services (Business Logic)
+├── Axios                     ├── Entity Framework Core
+├── Bootstrap                 ├── ASP.NET Core Identity
+└── Vite                      └── SQL Server
 ```
 
 ## System Diagram
 
 ```mermaid
 graph TB
-    Browser[Browser] -->|HTTP| MVC[MVC Controllers]
-    Browser -->|HTTP| API[Web API Controllers]
+    Browser[Browser] -->|HTTP/JSON| API[ASP.NET Core Web API]
     Browser <-->|WebSocket| SignalR[SignalR Hub]
 
-    MVC --> Services[Service Layer]
-    API --> Services
-
+    API --> Services[Service Layer]
     Services --> EF[Entity Framework Core]
     EF --> SQL[(SQL Server)]
-
     Services --> Identity[ASP.NET Core Identity]
     Identity --> SQL
 
-    API --> JWT[JWT Auth]
-    MVC --> Cookie[Cookie Auth]
+    subgraph "React SPA (Vite)"
+        Pages[Pages] --> Components[Components]
+        Components --> AxiosHTTP[Axios HTTP Client]
+        Context[Context API] --> Pages
+    end
+
+    subgraph "ASP.NET Core 8"
+        APIControllers[API Controllers] --> Services
+        JWT[JWT Auth] --> APIControllers
+        CORS[CORS] --> APIControllers
+    end
+
+    AxiosHTTP -->|REST + JWT| API
 ```
-
-## Major Components
-
-### Presentation Layer
-- **MVC Controllers** — serve Razor Views for browser clients
-- **API Controllers** — serve JSON for API consumers
-- **Razor Views** — server-rendered HTML
-- **ViewModels** — shaped data for views
-- **DTOs** — data transfer objects for API
-
-### Application Layer
-- **Service Classes** — business logic, orchestration
-- **Interfaces** — contracts for DI
-
-### Data Access Layer
-- **ApplicationDbContext** — EF Core context
-- **Entities** — domain models mapped to database tables
-- **Migrations** — database schema versioning
-
-### Cross-Cutting
-- **ASP.NET Core Identity** — authentication, authorization
-- **SignalR** — real-time notifications
-- **Logging** — via ASP.NET Core logging
 
 ## Request Lifecycles
 
-### MVC Request (Browser)
+### SPA Page Load
 ```
-Browser → HTTP Request → Routing → MVC Controller
-→ Service (business logic) → EF Core → SQL Server
-→ Service returns data → ViewModel created
-→ Razor View renders HTML → HTTP Response
-```
-
-### API Request (Client)
-```
-Client → HTTP Request → Routing → API Controller
-→ Model Validation → Service (business logic)
-→ EF Core → SQL Server → Service returns DTO
-→ JSON Response with HTTP Status Code
+Browser → Vite Dev Server / Static Files
+→ React App Loads → React Router resolves route
+→ Component mounts → Axios GET /api/...
+→ API Controller → Service → EF Core → SQL
+→ JSON Response → React state update → UI renders
 ```
 
-### SignalR Connection
+### Authenticated Request
 ```
-Browser → WebSocket → SignalR Hub
-→ Hub methods → Application Services
-→ Data Layer → Push updates to clients
+React Component → Axios with Authorization header
+→ API Controller [Authorize] → JWT validation
+→ Service → EF Core → SQL → JSON Response
+```
+
+### Real-Time (SignalR)
+```
+React App → SignalR JS Client → WebSocket
+→ NotificationHub → Service → Database
+→ Push update to connected clients
+```
+
+## Project Structure
+
+```
+EventSphere/
+├── EventSphere.Api/              # ASP.NET Core Web API
+│   ├── Controllers/              # API Controllers
+│   ├── Services/                 # Business logic
+│   ├── Data/                     # DbContext, Migrations
+│   ├── Models/Entities/          # Domain models
+│   ├── DTOs/                     # Data transfer objects
+│   ├── Hubs/                     # SignalR hubs
+│   ├── Program.cs
+│   └── appsettings.json
+├── EventSphere.React/            # React SPA (Vite)
+│   ├── src/
+│   │   ├── components/           # Reusable UI components
+│   │   ├── pages/                # Route-level pages
+│   │   ├── services/             # API call functions
+│   │   ├── context/              # React Context (auth, etc.)
+│   │   ├── hooks/                # Custom hooks
+│   │   ├── types/                # TypeScript interfaces
+│   │   ├── App.tsx               # Router setup
+│   │   └── main.tsx              # Entry point
+│   ├── public/
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+├── EventSphere.Tests/            # Unit & Integration tests
+├── EventSphere.sln
+└── .agent/                       # This documentation
 ```
 
 ## Dependencies
 
+### Backend (ASP.NET Core Web API)
 ```
-EventSphere.Web
-├── Microsoft.AspNetCore.Identity.EntityFrameworkCore
-├── Microsoft.EntityFrameworkCore.SqlServer
-├── Microsoft.EntityFrameworkCore.Tools
-├── Microsoft.AspNetCore.Authentication.JwtBearer
-└── Microsoft.AspNetCore.SignalR
+Microsoft.AspNetCore.Identity.EntityFrameworkCore
+Microsoft.EntityFrameworkCore.SqlServer
+Microsoft.EntityFrameworkCore.Tools
+Microsoft.AspNetCore.Authentication.JwtBearer
+Microsoft.AspNetCore.SignalR
+Microsoft.AspNetCore.Cors
+```
 
-EventSphere.Tests
-├── Microsoft.NET.Test.Sdk
-├── xunit
-├── xunit.runner.visualstudio
-├── Moq
-└── Microsoft.EntityFrameworkCore.InMemory
+### Frontend (React)
+```
+react, react-dom, react-router-dom
+axios
+bootstrap, react-bootstrap
+@microsoft/signalr
+typescript
+vite
+```
+
+### Tests
+```
+Microsoft.NET.Test.Sdk, xunit, xunit.runner.visualstudio
+Moq, Microsoft.EntityFrameworkCore.InMemory
+@testing-library/react, vitest (or jest)
 ```
 
 ## Architectural Constraints
 
 - SQL Server is the only supported database.
 - Entity Framework Core is the only ORM.
-- ASP.NET Core Identity is the only user management system.
-- No separate SPA frontend — MVC + Razor is the frontend.
-- SignalR only for genuine real-time features.
-
-## SRS Feature Coverage
-
-| SRS Feature | Status | Notes |
-|---|---|---|
-| Event CRUD | Required | Core feature |
-| Event approval workflow | Required | Pending → Approved → Live |
-| 4 user roles | Required | Visitor, Participant, Organizer, Admin |
-| Registration with slots | Required | Max participants, waitlist |
-| QR code check-in | Required | Attendance tracking |
-| Certificate generation | Required | Fee-based, payment out of scope |
-| Feedback/reviews | Required | Star ratings + comments |
-| Media gallery | Required | Images/videos per event |
-| Calendar integration | Required | .ics export |
-| Social media sharing | Required | Share buttons |
-| Real-time slot count | Required | SignalR |
-| Venue capacity management | Required | Dynamic seating |
-| User dashboard | Required | Activity history, notifications |
-| Admin dashboard | Required | Analytics, reports |
-| Sitemap | Required | On home page |
+- ASP.NET Core Identity for user management.
+- JWT Bearer for API authentication.
+- React is the frontend (no Razor Views).
+- CORS must be configured for React dev server.
 
 ## Known Risks
 
 - No health check endpoints (P1 gap).
 - No request rate limiting (P2 gap).
-- No structured logging provider (P2 gap).
 - No API versioning (P2 gap).
-- No caching layer (P2 gap).
-- Payment processing explicitly out of scope per SRS.
+- Payment processing out of scope per SRS.
+- CORS misconfiguration risk in production.

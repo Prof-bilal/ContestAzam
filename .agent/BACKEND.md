@@ -1,64 +1,54 @@
-# BACKEND.md — ASP.NET Core Backend
+# BACKEND.md — ASP.NET Core Web API
+
+## Overview
+
+The backend is a pure **ASP.NET Core 8 Web API**. No MVC controllers, no Razor Views. All UI is served by the React frontend.
 
 ## Project Structure
 
 ```
-EventSphere.Web/
-├── Program.cs                          # App entry point, DI, middleware
-├── Controllers/                        # MVC Controllers
-│   ├── AccountController.cs            # Login, Register, Profile, Logout
-│   ├── EventsController.cs             # CRUD + Registration
-│   ├── HomeController.cs               # Landing page
-│   ├── TicketsController.cs            # Ticket management
-│   ├── DatabaseController.cs           # Seed database
-│   └── Api/                            # Web API Controllers
-│       ├── AuthApiController.cs        # JWT login/register
-│       ├── EventsApiController.cs      # Event CRUD API
-│       ├── NotificationsApiController.cs
-│       ├── ReviewsApiController.cs
-│       └── Dtos/ApiDtos.cs             # All DTOs
+EventSphere.Api/
+├── Program.cs                          # Entry point, DI, middleware
+├── Controllers/                        # API Controllers only
+│   ├── AuthController.cs               # Login, register, token refresh
+│   ├── EventsController.cs             # Event CRUD
+│   ├── RegistrationsController.cs      # Event registration
+│   ├── AttendancesController.cs        # QR check-in
+│   ├── CertificatesController.cs       # Certificate management
+│   ├── FeedbackController.cs           # Reviews/feedback
+│   ├── MediaController.cs              # Gallery upload
+│   ├── UsersController.cs              # User management (admin)
+│   ├── NotificationsController.cs      # User notifications
+│   ├── DashboardController.cs          # Admin/organizer analytics
+│   └── VenuesController.cs             # Venue management
 ├── Services/
 │   ├── Interfaces/                     # Service contracts
 │   │   ├── IAuthService.cs
 │   │   ├── IEventService.cs
-│   │   ├── INotificationService.cs
 │   │   ├── IRegistrationService.cs
-│   │   ├── IReviewService.cs
-│   │   ├── ITicketService.cs
+│   │   ├── IAttendanceService.cs
+│   │   ├── ICertificateService.cs
+│   │   ├── IFeedbackService.cs
+│   │   ├── IMediaService.cs
+│   │   ├── IUserService.cs
+│   │   ├── INotificationService.cs
+│   │   ├── IDashboardService.cs
 │   │   └── IVenueService.cs
 │   └── Implementations/               # Service implementations
-│       ├── AuthService.cs
-│       ├── EventService.cs
-│       ├── NotificationService.cs
-│       ├── RegistrationService.cs
-│       ├── ReviewService.cs
-│       ├── TicketService.cs
-│       └── VenueService.cs
 ├── Data/
-│   ├── ApplicationDbContext.cs         # EF Core DbContext
-│   └── SeedData.cs                     # Initial data
-├── Hubs/
-│   └── NotificationHub.cs             # SignalR hub
+│   ├── ApplicationDbContext.cs
+│   └── SeedData.cs
 ├── Models/
 │   └── Entities/                       # Domain models
-│       ├── AppUser.cs
-│       ├── Event.cs
-│       ├── EventCategory.cs
-│       ├── EventRegistration.cs
-│       ├── Ticket.cs
-│       ├── Payment.cs
-│       ├── Venue.cs
-│       ├── Review.cs
-│       └── Notification.cs
-├── ViewModels/                         # View models for Razor
-├── wwwroot/                            # Static assets
+├── DTOs/                               # Request/Response DTOs
+├── Hubs/
+│   └── NotificationHub.cs
+├── Middleware/                          # Custom middleware
 ├── appsettings.json
 └── appsettings.Development.json
 ```
 
 ## Program.cs Configuration
-
-Key registrations in `Program.cs`:
 
 ```csharp
 // Database
@@ -70,57 +60,73 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// Authentication (Cookie for MVC, JWT for API)
-builder.Services.AddAuthentication()
-    .AddCookie(...)
-    .AddJwtBearer(...);
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => { ... });
+
+// CORS for React
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("React", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
 
 // Services (DI)
 builder.Services.AddScoped<IEventService, EventService>();
-builder.Services.AddScoped<IRegistrationService, RegistrationService>();
-builder.Services.AddScoped<ITicketService, TicketService>();
-builder.Services.AddScoped<IReviewService, ReviewService>();
-builder.Services.AddScoped<IVenueService, VenueService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
+// ... other services
 
 // SignalR
 builder.Services.AddSignalR();
 
-// MVC
-builder.Services.AddControllersWithViews();
+// API Controllers
+builder.Services.AddControllers();
+```
+
+## Middleware Pipeline
+
+```csharp
+app.UseHttpsRedirection();
+app.UseCors("React");
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 ```
 
 ## Layers
 
-### MVC Layer
-- Controllers inherit from `Controller`
-- Return `View()` or `RedirectToAction()`
-- Use `[ValidateAntiForgeryToken]` on POST
-- Use `[Authorize]` for protected pages
-
-### API Layer
-- Controllers inherit from `ControllerBase`
-- Use `[ApiController]` + `[Route("api/[controller]")]`
+### Controller Layer
+- `[ApiController]` + `[Route("api/[controller]")]`
+- Thin controllers — delegate to services
+- `[Authorize]` on protected endpoints
 - Return `Ok()`, `Created()`, `NotFound()`, `BadRequest()`
-- Use `[Authorize]` for protected endpoints
 
 ### Service Layer
 - Registered as Scoped in DI
 - Handle business logic
-- Use async/await
-- Return domain objects or DTOs
+- Async/await throughout
+- Return DTOs or domain objects
 
 ### Data Layer
-- `ApplicationDbContext` inherits `IdentityDbContext<AppUser>`
+- `ApplicationDbContext` (EF Core)
 - Entities mapped in `OnModelCreating`
-- Seed data in `SeedData.cs`
+- Migrations for schema changes
+
+## CORS
+
+- Development: `http://localhost:5173` (Vite default)
+- Production: configured via environment variable
+- Allow credentials for JWT cookies if used
 
 ## Configuration
 
 - `appsettings.json` — production config
-- `appsettings.Development.json` — development overrides
-- Connection string: `ConnectionStrings:DefaultConnection`
-- JWT: `Jwt:Key`, `Jwt:Issuer`, `Jwt:Audience`, `Jwt:ExpirationInMinutes`
+- `appsettings.Development.json` — dev overrides
+- Environment variables for secrets in production
 
 > Never commit real secrets. Use placeholders.

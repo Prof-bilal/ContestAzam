@@ -1,26 +1,65 @@
 # DECISIONS.md — Architecture Decision Records
 
-## ADR-001 — Use ASP.NET Core MVC + Razor for Frontend
+## ADR-001 — Use React for Frontend
 
 ### Status
 Accepted
 
 ### Context
-EventSphere needs a frontend for browsing and managing events. The team decided between SPA (React/Vue) and server-rendered (Razor).
+EventSphere needs a responsive, interactive frontend for browsing events, registration, dashboards, and admin panel. The team chose between ASP.NET Core MVC (Razor) and React SPA.
 
 ### Decision
-Use ASP.NET Core MVC with Razor Views for the frontend. No separate SPA framework.
+Use React 18+ with Vite, React Router, and TypeScript as the frontend. ASP.NET Core Web API serves as the backend.
 
 ### Consequences
-- Single technology stack (simpler deployment, fewer dependencies).
-- Server-rendered HTML (good SEO, fast initial load).
-- No client-side routing complexity.
-- Limited client-side interactivity compared to SPA.
-- All UI logic stays in C# / Razor.
+- Clear separation of frontend and backend.
+- Rich interactivity and component reuse.
+- Client-side routing (SPA experience).
+- Separate deployment for frontend and backend.
+- CORS configuration required.
+- JWT authentication (stateless).
 
 ---
 
-## ADR-002 — Use Entity Framework Core as ORM
+## ADR-002 — ASP.NET Core Web API (No MVC)
+
+### Status
+Accepted
+
+### Context
+With React as the frontend, MVC Controllers and Razor Views are unnecessary.
+
+### Decision
+Use pure ASP.NET Core Web API. No MVC controllers, no Razor Views.
+
+### Consequences
+- Simpler backend — only API controllers.
+- All UI logic lives in React.
+- JSON-only responses (no server-rendered HTML).
+- Cleaner separation of concerns.
+
+---
+
+## ADR-003 — JWT Bearer as Primary Auth
+
+### Status
+Accepted
+
+### Context
+React SPA needs stateless authentication. Cookie auth doesn't work well with cross-origin SPA + API setup.
+
+### Decision
+Use JWT Bearer authentication. Token stored in localStorage/httpOnly cookie by React. Sent via `Authorization` header.
+
+### Consequences
+- Stateless — no server-side session.
+- Token expiry and refresh needed.
+- CORS must allow credentials.
+- React manages token lifecycle.
+
+---
+
+## ADR-004 — Entity Framework Core + SQL Server
 
 ### Status
 Accepted
@@ -36,63 +75,41 @@ Use Entity Framework Core with Code-First approach.
 - LINQ queries (type-safe).
 - Change tracking built-in.
 - Potential N+1 query issues (mitigate with Include()).
-- Migrations must be reviewed before deployment.
 
 ---
 
-## ADR-003 — Dual Authentication (Cookie + JWT)
+## ADR-005 — Vite as Build Tool
 
 ### Status
 Accepted
 
 ### Context
-MVC controllers need session-based auth; API needs stateless auth.
+Need fast dev server and optimized production build for React.
 
 ### Decision
-- MVC uses Cookie authentication.
-- API uses JWT Bearer authentication.
-- Both share ASP.NET Core Identity.
+Use Vite for React development and build.
 
 ### Consequences
-- Single user store (Identity).
-- Two authentication schemes configured.
-- JWT for API consumers, cookies for browser.
-- Token refresh not implemented (P2 gap).
+- Fast HMR (Hot Module Replacement).
+- Optimized production builds.
+- Native ESM support.
+- Plugin ecosystem for Tailwind, etc.
 
 ---
 
-## ADR-004 — Use SignalR for Real-Time Notifications
+## ADR-006 — SignalR for Real-Time
 
 ### Status
 Accepted
 
 ### Context
-Users need real-time notification delivery.
+Users need real-time notifications (event updates, slot changes).
 
 ### Decision
-Use ASP.NET Core SignalR for push notifications.
+Use ASP.NET Core SignalR with React client (`@microsoft/signalr`).
 
 ### Consequences
 - WebSocket-based communication.
-- Hub-based architecture.
-- Connection management required.
-- Fallback to long-polling if WebSocket unavailable.
-
----
-
-## ADR-005 — Service Layer Pattern
-
-### Status
-Accepted
-
-### Context
-Need clean separation between controllers and data access.
-
-### Decision
-Implement service layer between controllers and EF Core.
-
-### Consequences
-- Controllers stay thin.
-- Business logic testable in isolation.
-- Services registered via DI.
-- Slight overhead of additional abstraction layer.
+- Automatic fallback to long-polling.
+- React connects on app mount.
+- Hub authentication via JWT.

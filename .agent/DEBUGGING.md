@@ -1,4 +1,4 @@
-# DEBUGGING.md — ASP.NET Core Debugging Playbook
+# DEBUGGING.md — Debugging Playbook
 
 ## Workflow
 
@@ -7,95 +7,93 @@ Reproduce → Gather Evidence → Identify Boundary → Narrow Hypothesis
 → Test Hypothesis → Fix Root Cause → Regression Test → Verify
 ```
 
-## Common Issues
+## Backend Debugging (ASP.NET Core)
 
 ### Application Won't Start
+- Check `Program.cs` for DI errors.
+- Verify NuGet packages restored.
+- Check connection string validity.
+- Look for missing middleware.
 
-1. Check `Program.cs` for DI registration errors.
-2. Verify all NuGet packages are restored.
-3. Check connection string is valid.
-4. Look for missing service registrations.
-5. Check for duplicate middleware.
-
-### DI Failures
-
-- `InvalidOperationException: Unable to resolve service`
-- Check `Program.cs` for missing `AddScoped`/`AddSingleton`/`AddTransient`.
-- Verify interface and implementation are both registered.
-
-### MVC Routing Problems
-
-- 404 on known routes → check route pattern in `Program.cs`.
-- Wrong action called → verify `asp-controller` and `asp-action` in Razor.
-- Check for `[Route]` attribute conflicts.
-
-### Razor View Errors
-
-- `InvalidOperationException: The view 'X' was not found`
-- Check Views folder structure matches controller name.
-- Verify `_ViewImports.cshtml` has correct `@addTagHelper`.
-- Check for compilation errors in `.cshtml` files.
-
-### Model Binding Failures
-
-- Properties are null/zero → check property names match form field names.
-- Complex objects not binding → check for `[FromBody]` vs `[FromForm]`.
-- Collection binding → ensure correct naming convention.
-
-### API Errors
-
-- 401 Unauthorized → check JWT token validity, expiry, signing key.
-- 400 Bad Request → check model validation, required fields.
-- 404 Not Found → verify route pattern and HTTP method.
+### API Returns 401/403
+- Check JWT token validity (expiry, signing key).
+- Verify `[Authorize]` attribute placement.
+- Check CORS configuration.
+- Verify token is sent in `Authorization` header.
 
 ### EF Core Errors
+- `DbUpdateException` → foreign key constraint.
+- `InvalidOperationException` → missing `Include()`.
+- Migration errors → pending model changes.
+- `SqlException` → SQL Server not running.
 
-- `DbUpdateException` → check foreign key constraints.
-- `InvalidOperationException` → check for missing `Include()`.
-- Migration errors → check for pending model changes.
-- `SqlException` → verify SQL Server is running and accessible.
+### DI Failures
+- `Unable to resolve service` → missing registration in `Program.cs`.
 
-### Authentication Problems
+## Frontend Debugging (React)
 
-- Cookie not set → check `SignInManager` configuration.
-- JWT invalid → verify key, issuer, audience match `Program.cs`.
-- Identity errors → check password policy, user lockout settings.
+### Blank Page / White Screen
+- Open browser DevTools console.
+- Check for JavaScript errors.
+- Verify API URL in `.env`.
+- Check React Router configuration.
 
-### Build Failures
+### API Calls Failing
+- Open Network tab in DevTools.
+- Check request URL, headers, payload.
+- Verify `Authorization: Bearer {token}` header.
+- Check CORS errors in console.
 
-- Missing references → `dotnet restore`.
-- Version conflicts → check `.csproj` package versions.
-- Compilation errors → check C# syntax, nullable reference types.
+### State Not Updating
+- Use React DevTools extension.
+- Check Context providers wrapping components.
+- Verify state update is not mutated directly.
 
-## Debugging Tools
+### Routing Issues
+- Check `React Router` route definitions in `App.tsx`.
+- Verify `BrowserRouter` wraps the app.
+- Check for typos in route paths.
 
+### Build Errors
 ```bash
-# Check package vulnerabilities
-dotnet list package --vulnerable
-
-# Verify build
-dotnet build --verbosity detailed
-
-# Check migrations
-dotnet ef migrations list --project EventSphere.Web
-
-# View SQL (in Development)
-# Enable EF Core logging in appsettings.Development.json
+cd EventSphere.React
+npm run build
+# Read error messages carefully
+# Check TypeScript errors: npx tsc --noEmit
 ```
+
+## Cross-Layer Debugging
+
+### Auth Flow Broken
+1. Test API directly: `curl -X POST http://localhost:5001/api/auth/login -d '{...}'`
+2. Verify JWT token returned.
+3. Test authenticated endpoint: `curl -H "Authorization: Bearer {token}" http://localhost:5001/api/events`
+4. Check React Axios interceptor is attaching token.
+
+### Data Not Appearing in UI
+1. Test API endpoint directly (Postman/curl).
+2. Check browser Network tab for response.
+3. Verify React component is fetching data.
+4. Check component rendering logic.
 
 ## Logging
 
-Add temporary logging for debugging:
 ```csharp
-_logger.LogInformation("Debug: {Variable}", variableValue);
+// Backend
+_logger.LogInformation("Processing event {EventId}", eventId);
+_logger.LogError(ex, "Failed to process registration");
 ```
 
-Check logs in console output or configured logging provider.
+```typescript
+// Frontend
+console.log('API Response:', data);
+console.error('API Error:', error);
+```
 
 ## Rules
 
-- Reproduce the issue before fixing.
-- Make one change at a time.
-- Verify fix doesn't break other functionality.
-- Add regression test for the fix.
-- Remove debug logging before committing.
+- Reproduce before fixing.
+- One change at a time.
+- Verify fix doesn't break other features.
+- Add regression test.
+- Remove debug logging before commit.

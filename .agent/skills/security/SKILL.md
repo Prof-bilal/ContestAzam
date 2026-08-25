@@ -2,70 +2,65 @@
 
 ## Purpose
 
-Guide agents to perform security review of code changes before completing work.
+Guide agents to perform security review of code changes.
 
 ## When To Use
 
-- Any code change that touches authentication, authorization, data access, or user input.
+- Any change touching auth, data access, or user input.
 - Before completing any task.
-
-## Inputs
-
-- Changed files.
-- `.agent/SECURITY.md` for full security rules.
-
-## Preconditions
-
-- Read `.agent/SECURITY.md`.
-- Understand what was changed.
 
 ## Checklist
 
 ### Secrets
-- [ ] No hardcoded passwords, API keys, tokens, or secrets.
+- [ ] No hardcoded passwords, API keys, tokens.
 - [ ] No real connection strings in source code.
-- [ ] JWT keys are in configuration, not code.
+- [ ] JWT key is in configuration, not code.
+- [ ] React `.env` not committed (use `.env.example`).
 
-### Authentication
-- [ ] `[Authorize]` on protected endpoints.
-- [ ] Role-based access where needed.
-- [ ] No bypass of authentication.
+### Authentication (JWT)
+- [ ] `[Authorize]` on protected API endpoints.
+- [ ] JWT token validated (expiry, signing key, issuer/audience).
+- [ ] Token not stored in plain JS variables.
+- [ ] Refresh token flow implemented (if applicable).
+
+### Authorization
+- [ ] Role-based access correct (`Admin`, `Organizer`, `Participant`).
+- [ ] Ownership checks in services.
+- [ ] React `ProtectedRoute` enforces roles on frontend.
+
+### CORS
+- [ ] Specific origins whitelisted (not `AllowAnyOrigin`).
+- [ ] React dev server origin included.
+- [ ] Credentials allowed for JWT.
 
 ### Input Validation
-- [ ] All user input validated (model validation).
-- [ ] No SQL injection (use EF Core parameterized queries).
-- [ ] No XSS (Razor auto-encodes; no unsafe `@Html.Raw()`).
-- [ ] File uploads validated (type, size) if applicable.
+- [ ] Backend: Model validation on DTOs.
+- [ ] Frontend: Form validation before submission.
+- [ ] No SQL injection (EF Core parameterized queries).
+- [ ] No XSS (React auto-escapes; no `dangerouslySetInnerHTML`).
 
 ### Data Exposure
-- [ ] No sensitive data in API responses (passwords, tokens, internal IDs).
+- [ ] No sensitive data in API responses.
 - [ ] No stack traces in error responses.
 - [ ] No logging of sensitive data.
 
-### CSRF
-- [ ] `[ValidateAntiForgeryToken]` on MVC POST actions.
-- [ ] Anti-forgery tokens in forms.
+### File Uploads
+- [ ] File type whitelist enforced.
+- [ ] File size limits enforced.
+- [ ] Files stored outside web root.
 
 ### Dependencies
-- [ ] No known vulnerable packages added.
-- [ ] `dotnet list package --vulnerable` checked.
-
-## Workflow
-
-1. Review all changed files against checklist.
-2. Flag any issues found.
-3. Fix issues before marking work complete.
-4. Document any security-relevant decisions.
+- [ ] `dotnet list package --vulnerable` — clean.
+- [ ] `npm audit` — clean (or vulnerabilities documented).
 
 ## Verification
 
 ```bash
 dotnet list package --vulnerable
+cd EventSphere.React && npm audit
 ```
-
-No security regressions in changed code.
 
 ## Failure Handling
 
-- If a security issue is found → fix it immediately.
-- If unsure → flag for manual review, do not proceed.
+- Security issue found → fix immediately.
+- If unsure → flag for manual review.

@@ -1,25 +1,21 @@
 # CODE_STYLE.md — Coding Conventions
 
-## C#
+## C# (Backend)
 
-- Use `PascalCase` for public members, classes, methods, properties.
-- Use `camelCase` for local variables, parameters, private fields.
+- `PascalCase` for public members, classes, methods, properties.
+- `camelCase` for local variables, parameters, private fields.
 - Prefix private fields with `_` (e.g., `_context`).
 - Use `var` when type is obvious.
-- Prefer `is null` over `== null`.
 - Use `string.Empty` over `""`.
-- Use expression-bodied members for simple one-liners.
 - Async methods suffixed with `Async`.
 - One class per file.
 
-## ASP.NET Core
+## ASP.NET Core API
 
-- Controllers: inherit `Controller` (MVC) or `ControllerBase` (API).
-- Use `[ValidateAntiForgeryToken]` on all POST actions.
-- Use `[Authorize]` with role parameters where needed.
+- Controllers: inherit `ControllerBase`.
+- Use `[ApiController]` + `[Route("api/[controller]")]`.
 - Return `Task<IActionResult>` for async actions.
-- Use `TempData` for flash messages.
-- Use `ViewData`/`ViewBag` sparingly — prefer ViewModels.
+- One endpoint per method.
 
 ## Services
 
@@ -27,58 +23,71 @@
 - Services registered as Scoped.
 - Constructor injection only.
 - Async/await throughout.
-- Throw exceptions for business rule violations, return null for "not found".
 
-## Models/Entities
+## React / TypeScript
 
-- One entity per file.
-- Use data annotations for validation.
-- Navigation properties as virtual (for EF Core proxying).
-- No business logic in entities.
+- **Components**: Functional only, `PascalCase` filenames.
+- **Files**: `PascalCase.tsx` for components, `camelCase.ts` for utilities.
+- **Props**: TypeScript interfaces, destructure in function signature.
+- **Hooks**: `use` prefix, custom hooks in `hooks/` directory.
+- **State**: `useState`, `useReducer`, Context API.
+- **Styling**: Bootstrap classes, CSS Modules for custom styles.
 
-## ViewModels
+## TypeScript
 
-- One ViewModel per view (or shared view).
-- Use `[Required]`, `[StringLength]`, `[Display]` annotations.
-- Name: `{Purpose}ViewModel`.
+- Strict mode enabled.
+- Prefer `interface` over `type` for object shapes.
+- Use `enum` for fixed value sets.
+- Avoid `any` — use `unknown` if type is truly unknown.
+- Export types separately from implementations.
 
-## Razor Views
+## File Organization
 
-- `@model` directive at top.
-- Use Tag Helpers for URLs and forms.
-- No business logic in `.cshtml`.
-- Use partials for repeated UI.
-- Use `@section` for scripts/styles.
+```
+# Backend
+Controllers/    → Thin API controllers
+Services/       → Business logic
+Models/         → Entities
+DTOs/           → Data transfer objects
+Data/           → DbContext, migrations
 
-## JavaScript
+# Frontend
+components/     → Reusable UI components
+pages/          → Route-level page components
+services/       → API call functions
+context/        → React Context providers
+hooks/          → Custom React hooks
+types/          → TypeScript interfaces
+utils/          → Helper functions
+```
 
-- Vanilla JS (no jQuery dependency for new code).
-- Use `addEventListener` for events.
-- Keep JS minimal — prefer server-side rendering.
+## Formatting
 
-## CSS
+### C#
+- 4 spaces indentation.
+- Braces on new line (Allman style).
+- Blank line between methods.
 
-- Use Bootstrap classes where possible.
-- Custom styles in `site.css`.
-- Use CSS variables for theming.
-- Avoid `!important`.
-
-## Tests
-
-- `Arrange / Act / Assert` pattern.
-- Method naming: `MethodName_Scenario_ExpectedResult`.
-- One assertion per test (preferred).
-- Use `[Fact]` for single, `[Theory]` for parameterized.
+### TypeScript/React
+- 2 spaces indentation.
+- Single quotes for strings.
+- Semicolons at end of statements.
+- Trailing commas in multiline.
 
 ## Comments
 
 - Do not add comments unless requested.
-- Use XML docs for public API surface only.
+- Use XML docs for public API surface (backend).
 - Code should be self-documenting.
 
-## Formatting
+## Tests
 
-- 4 spaces for C# indentation.
-- Braces on new line (Allman style).
-- Blank line between methods.
-- Max line length: prefer readability over strict limit.
+### C# (xunit)
+- `Arrange / Act / Assert` pattern.
+- Method naming: `MethodName_Scenario_ExpectedResult`.
+
+### TypeScript (Vitest/Jest)
+- `describe` blocks for grouping.
+- `it` or `test` for individual tests.
+- `expect` assertions.
+- Mock API calls with `vi.fn()` or MSW.

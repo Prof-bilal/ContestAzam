@@ -1,15 +1,8 @@
-# debugging/SKILL.md — Debug ASP.NET Core Applications
+# debugging/SKILL.md — Debug Full-Stack App
 
 ## Purpose
 
-Guide agents to systematically diagnose and fix issues in EventSphere.
-
-## When To Use
-
-- Application errors or unexpected behavior.
-- Build failures.
-- Runtime exceptions.
-- Test failures.
+Guide agents to systematically diagnose issues in both backend (ASP.NET Core) and frontend (React).
 
 ## Workflow
 
@@ -18,55 +11,35 @@ Reproduce → Gather Evidence → Identify Boundary → Narrow Hypothesis
 → Test Hypothesis → Fix Root Cause → Regression Test → Verify
 ```
 
-## Steps
+## Identify the Layer
 
-### 1. Reproduce
-- Get exact steps to reproduce.
-- Get error message, stack trace, logs.
-
-### 2. Gather Evidence
-- Read error message carefully.
-- Check logs (console output).
-- Check `appsettings.json` configuration.
-- Verify database connection.
-
-### 3. Identify Boundary
-- Which layer? (Controller, Service, Data, View)
-- Which feature? (Auth, Events, Tickets, etc.)
-- Is it a build error or runtime error?
-
-### 4. Narrow Hypothesis
-- Based on error type, form 2-3 hypotheses.
-- Start with most likely.
-
-### 5. Test Hypothesis
-- Add logging: `_logger.LogInformation("Debug: {Var}", var)`.
-- Check variable values.
-- Verify assumptions against code.
-
-### 6. Fix Root Cause
-- Make minimal change to fix.
-- Don't fix symptoms — fix the cause.
-
-### 7. Regression Test
-- Run existing tests: `dotnet test`.
-- Add new test for the bug if missing.
-
-### 8. Verify
-- Build succeeds.
-- All tests pass.
-- Issue no longer reproduces.
-
-## Common Error Patterns
-
-| Error | Likely Cause |
+| Symptom | Layer |
 |---|---|
-| `InvalidOperationException: No service` | Missing DI registration in `Program.cs` |
-| `NullReferenceException` | Missing null check or null navigation property |
-| `DbUpdateException` | Foreign key violation, missing required field |
-| `401 Unauthorized` | JWT token expired, wrong key, missing auth header |
-| `View not found` | Wrong view name, missing `_ViewImports` |
-| `Model validation failed` | Missing `[Required]`, wrong field names |
+| 500 error, DI failure, SQL error | Backend |
+| White screen, JS error, state issue | Frontend |
+| 401/403, CORS error | Auth/CORS (both) |
+| Data missing in UI | Both (API response + React rendering) |
+
+## Backend Issues
+
+- API won't start → check `Program.cs`, connection string, packages.
+- 500 error → check logs, service code.
+- 401 → check JWT token, signing key.
+- EF Core error → check migrations, entity configuration.
+
+## Frontend Issues
+
+- Blank page → browser console, API URL in `.env`.
+- API call fails → Network tab, CORS, auth header.
+- State not updating → React DevTools, Context providers.
+- Routing broken → check `App.tsx` routes.
+
+## Cross-Layer
+
+- Test API directly with curl/Postman.
+- Check browser Network tab for request/response.
+- Verify JWT token is attached to requests.
+- Check CORS in API `Program.cs`.
 
 ## Rules
 
@@ -74,4 +47,3 @@ Reproduce → Gather Evidence → Identify Boundary → Narrow Hypothesis
 - One change at a time.
 - Verify fix doesn't break other features.
 - Add regression test.
-- Remove debug logging before commit.

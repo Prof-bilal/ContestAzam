@@ -2,60 +2,57 @@
 
 ## Purpose
 
-Guide agents to correctly add, modify, and run tests in EventSphere.
+Guide agents to correctly add, modify, and run tests for both backend (C#) and frontend (React).
 
 ## When To Use
 
-- Adding new service method → add unit test.
-- Fixing a bug → add regression test.
-- Adding API endpoint → add integration test.
-- Modifying business logic → verify existing tests still pass.
+- Adding new API endpoint → backend test.
+- Adding new React component → frontend test.
+- Fixing a bug → regression test.
+- Modifying business logic → verify existing tests.
 
 ## Inputs
 
-- The service, controller, or method being changed.
-- The test project: `EventSphere.Tests/`.
+- Backend: `EventSphere.Tests/`
+- Frontend: `EventSphere.React/src/**/*.test.tsx`
 
 ## Preconditions
 
-- Test project exists: `EventSphere.Tests/EventSphere.Tests.csproj`.
-- Framework: xunit + Moq + InMemory EF Core.
-- Run `dotnet test` from solution root.
+- Test projects exist.
+- Backend: xunit + Moq + InMemory EF Core.
+- Frontend: Vitest + @testing-library/react.
 
 ## Workflow
 
-1. **Identify affected code**: Read the service/controller being modified.
-2. **Find existing tests**: Check `EventSphere.Tests/Unit/` and `EventSphere.Tests/Integration/`.
-3. **Preserve test structure**: Match existing naming, fixture, and pattern conventions.
-4. **Write tests**:
-   - Unit test for business logic (mock dependencies).
-   - Integration test for database operations (InMemory provider).
-   - At least one happy path and one failure/edge case.
-5. **Run narrow test suite first**: `dotnet test --filter "FullyQualifiedName~{TestClassName}"`.
-6. **Run full suite**: `dotnet test`.
-7. **Verify all pass**.
+### Backend Tests
+1. Find existing test class in `EventSphere.Tests/Unit/` or `Integration/`.
+2. Preserve test structure and naming conventions.
+3. Write tests: `Arrange / Act / Assert`.
+4. Run: `dotnet test`.
+
+### Frontend Tests
+1. Find existing test in `EventSphere.React/src/**/*.test.tsx`.
+2. Use `describe/it` blocks.
+3. Mock API calls with `vi.fn()` or MSW.
+4. Run: `cd EventSphere.React && npm test`.
 
 ## Rules
 
 - Never delete existing tests.
 - Never weaken assertions.
-- Use `Arrange / Act / Assert`.
-- Method naming: `MethodName_Scenario_ExpectedResult`.
-- Use `[Fact]` for single tests, `[Theory]` for parameterized.
 - One assertion per test (preferred).
-- Tests must be independent (no shared state).
-- Use InMemory provider for DB tests, not real SQL Server.
+- Tests must be independent.
+- Run both backend and frontend tests before committing.
 
 ## Verification
 
 ```bash
-dotnet test --verbosity normal
+dotnet test                           # Backend
+cd EventSphere.React && npm test      # Frontend
 ```
-
-All tests must pass. No skipped tests.
 
 ## Failure Handling
 
-- If new test fails → fix the test or the implementation.
-- If existing test fails → investigate whether the change broke behavior.
+- New test fails → fix test or implementation.
+- Existing test fails → investigate regression.
 - Never disable tests to pass CI.

@@ -2,69 +2,77 @@
 
 ## Purpose
 
-Guide agents to verify builds, configuration, and database before deployment.
+Guide agents to verify builds, config, and database before deployment.
 
 ## When To Use
 
 - Before merging to `main`.
 - Before deploying to production.
-- When setting up CI/CD.
-
-## Inputs
-
-- `.agent/DEPLOYMENT.md` for deployment guide.
-- `.agent/DEVELOPMENT.md` for local setup.
 
 ## Pre-Deployment Checklist
 
-### Build
+### Backend Build
 ```bash
-dotnet build EventSphere.sln --configuration Release
-```
-- [ ] Build succeeds with zero errors.
-- [ ] No warnings related to security or deprecated APIs.
-
-### Tests
-```bash
+dotnet build EventSphere.Api -c Release
 dotnet test
 ```
+- [ ] Build succeeds.
 - [ ] All tests pass.
-- [ ] No skipped tests.
+
+### Frontend Build
+```bash
+cd EventSphere.React
+npm run build
+npm test
+```
+- [ ] Build succeeds (no TypeScript errors).
+- [ ] All tests pass.
 
 ### Configuration
-- [ ] No hardcoded secrets in code.
-- [ ] `appsettings.json` uses placeholders.
-- [ ] Production config uses environment variables.
+- [ ] No hardcoded secrets.
+- [ ] CORS configured for production domain.
+- [ ] JWT key is strong and unique.
+- [ ] Connection string uses environment variable.
 
 ### Database
 ```bash
-dotnet ef migrations list --project EventSphere.Web
+dotnet ef migrations list --project EventSphere.Api
 ```
-- [ ] Migrations are up to date.
-- [ ] No destructive migrations without authorization.
-- [ ] Seed data reviewed.
+- [ ] Migrations up to date.
+- [ ] No destructive migrations.
 
 ### Security
-- [ ] `dotnet list package --vulnerable` — no known vulnerabilities.
-- [ ] No secrets committed.
-- [ ] JWT key is strong and unique.
+- [ ] `dotnet list package --vulnerable` — clean.
+- [ ] `npm audit` — clean.
 - [ ] HTTPS enforced.
 
 ## Publish
+
 ```bash
-dotnet publish EventSphere.Web/EventSphere.Web.csproj -c Release -o ./publish
+# Backend
+dotnet publish EventSphere.Api -c Release -o ./publish-api
+
+# Frontend
+cd EventSphere.React && npm run build
+# Output in dist/ — deploy to CDN or static hosting
 ```
 
-## Rollback Plan
+## Deployment Targets
+
+| Component | Deployment |
+|---|---|
+| API | Azure App Service, IIS, Docker |
+| React | Vercel, Netlify, Azure Static Web Apps, CDN |
+| Database | Azure SQL, AWS RDS, on-premise SQL Server |
+
+## Rollback
 
 1. Keep previous version available.
 2. Database migrations must be backward-compatible.
-3. Rollback by deploying previous published version.
-4. Revert migrations only if safe.
+3. Rollback by deploying previous version.
 
 ## Rules
 
 - Never deploy without running tests.
 - Never deploy with known vulnerabilities.
 - Never deploy hardcoded secrets.
-- Verify database migrations before applying.

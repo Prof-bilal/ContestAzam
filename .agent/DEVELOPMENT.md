@@ -3,34 +3,55 @@
 ## Prerequisites
 
 - .NET 8 SDK
+- Node.js 18+ and npm
 - SQL Server (LocalDB or full instance)
-- IDE: Visual Studio 2022, JetBrains Rider, or VS Code
+- IDE: VS Code (both), Visual Studio (backend), or JetBrains Rider
 - Git
 
-## Setup
+## Project Structure
+
+```
+EventSphere/
+├── EventSphere.Api/          # ASP.NET Core Web API (backend)
+├── EventSphere.React/        # React SPA (frontend)
+├── EventSphere.Tests/        # Tests
+├── EventSphere.sln
+└── .agent/
+```
+
+## Backend Setup
 
 ```bash
-# Clone repository
-git clone <repo-url>
-cd EventSphere
-
 # Restore packages
 dotnet restore
 
-# Update connection string in appsettings.Development.json
-# Default: Server=(localdb)\\mssqllocaldb;Database=EventSphereDb_Dev;...
+# Update connection string in EventSphere.Api/appsettings.Development.json
 
 # Run migrations
-dotnet ef database update --project EventSphere.Web
+dotnet ef database update --project EventSphere.Api
 
-# Seed database (optional, via UI)
-# Navigate to /Database/Seed and submit form
-
-# Run application
-dotnet run --project EventSphere.Web
+# Run API
+dotnet run --project EventSphere.Api
+# API starts at https://localhost:5001
 ```
 
-Application starts at `https://localhost:5001` or `http://localhost:5000`.
+## Frontend Setup
+
+```bash
+cd EventSphere.React
+
+# Install dependencies
+npm install
+
+# Configure API URL
+# Create .env file:
+echo "VITE_API_URL=http://localhost:5001" > .env
+echo "VITE_SIGNALR_URL=http://localhost:5001/hubs/notifications" >> .env
+
+# Run dev server
+npm run dev
+# React starts at http://localhost:5173
+```
 
 ## Default Accounts
 
@@ -38,63 +59,44 @@ Application starts at `https://localhost:5001` or `http://localhost:5000`.
 |---|---|---|
 | Admin | admin@eventsphere.com | Admin@123 |
 | Organizer | organizer@eventsphere.com | Organizer@123 |
+| Participant | participant@eventsphere.com | Participant@123 |
 
 ## Common Commands
 
 ```bash
-# Build
-dotnet build
-
-# Run
-dotnet run --project EventSphere.Web
+# Build all
+dotnet build EventSphere.sln
+cd EventSphere.React && npm run build
 
 # Run tests
 dotnet test
+cd EventSphere.React && npm test
 
-# Add migration
-dotnet ef migrations add <Name> --project EventSphere.Web
+# Add EF migration
+dotnet ef migrations add <Name> --project EventSphere.Api
 
-# Update database
-dotnet ef database update --project EventSphere.Web
-
-# Remove last migration
-dotnet ef migrations remove --project EventSphere.Web
-
-# Check for vulnerabilities
+# Check vulnerabilities
 dotnet list package --vulnerable
-```
-
-## Project Structure
-
-```
-EventSphere/
-├── EventSphere.sln
-├── EventSphere.Web/         # Main application
-│   ├── Controllers/         # MVC + API controllers
-│   ├── Data/                # DbContext, Seed
-│   ├── Hubs/                # SignalR hubs
-│   ├── Models/Entities/     # Domain models
-│   ├── Services/            # Business logic
-│   ├── ViewModels/          # View models
-│   ├── Views/               # Razor views
-│   └── wwwroot/             # Static files
-├── EventSphere.Tests/       # Test project
-└── .agent/                  # This documentation
+cd EventSphere.React && npm audit
 ```
 
 ## Troubleshooting
 
-### Build fails
-- Run `dotnet restore` first.
-- Check .NET SDK version: `dotnet --list-sdks`.
-- Ensure SQL Server is running (for LocalDB).
-
-### Database connection fails
-- Verify SQL Server is running.
+### API won't start
 - Check connection string in `appsettings.Development.json`.
-- Try: `sqlcmd -S (localdb)\\mssqllocaldb`
+- Verify SQL Server is running.
+- Run `dotnet restore`.
 
-### Migration errors
-- Remove `bin/` and `obj/` folders.
-- Re-run `dotnet restore`.
-- Try `dotnet ef migrations add Reset --project EventSphere.Web`.
+### React won't start
+- Run `npm install`.
+- Check `.env` for correct `VITE_API_URL`.
+- Verify API is running on expected port.
+
+### CORS errors
+- Ensure API CORS policy includes `http://localhost:5173`.
+- Check `Program.cs` CORS configuration.
+
+### 401 Unauthorized from React
+- Check JWT token is attached in Axios interceptor.
+- Verify token hasn't expired.
+- Check JWT key matches between API config and token generation.
