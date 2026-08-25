@@ -116,6 +116,26 @@ EventSphere.Tests
 - No separate SPA frontend — MVC + Razor is the frontend.
 - SignalR only for genuine real-time features.
 
+## SRS Feature Coverage
+
+| SRS Feature | Status | Notes |
+|---|---|---|
+| Event CRUD | Required | Core feature |
+| Event approval workflow | Required | Pending → Approved → Live |
+| 4 user roles | Required | Visitor, Participant, Organizer, Admin |
+| Registration with slots | Required | Max participants, waitlist |
+| QR code check-in | Required | Attendance tracking |
+| Certificate generation | Required | Fee-based, payment out of scope |
+| Feedback/reviews | Required | Star ratings + comments |
+| Media gallery | Required | Images/videos per event |
+| Calendar integration | Required | .ics export |
+| Social media sharing | Required | Share buttons |
+| Real-time slot count | Required | SignalR |
+| Venue capacity management | Required | Dynamic seating |
+| User dashboard | Required | Activity history, notifications |
+| Admin dashboard | Required | Analytics, reports |
+| Sitemap | Required | On home page |
+
 ## Known Risks
 
 - No health check endpoints (P1 gap).
@@ -123,3 +143,4 @@ EventSphere.Tests
 - No structured logging provider (P2 gap).
 - No API versioning (P2 gap).
 - No caching layer (P2 gap).
+- Payment processing explicitly out of scope per SRS.

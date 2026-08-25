@@ -2,7 +2,32 @@
 
 ## Mission
 
-EventSphere is an **event management and discovery platform**. Users can browse, create, register for, and manage events. Organizers publish events, attendees register and receive tickets, and administrators manage the platform.
+EventSphere is a **College Event Information System** — a full-stack web application for managing college events. Students browse and register for events, organizers create and manage events, and administrators oversee the entire platform. See `../SRS.md` for the full SRS.
+
+### User Roles (from SRS)
+
+| Role | Description |
+|---|---|
+| **Normal Student (Visitor)** | Unregistered user; browses public events, gallery, about/contact pages |
+| **Participant (Registered Student)** | Registers, attends events, gets certificates, submits feedback |
+| **Organizer (College Staff)** | Creates/manages events, manages registrations, uploads media, issues certificates |
+| **Admin (System Administrator)** | Manages users, approves events, moderates content, sends announcements, generates reports |
+
+### Key Features (from SRS)
+
+- Event listing, search, filtering (by category, department, date)
+- Registration with slot management and waitlist
+- QR code check-in for attendance
+- Certificate generation and download (fee-based, payment out of scope)
+- Feedback and reviews (star ratings + comments)
+- Media gallery (images/videos categorized by event)
+- Calendar integration (.ics export)
+- Social media sharing
+- Real-time slot availability
+- Dynamic venue capacity management
+- User dashboard with activity history
+- Admin dashboard with analytics
+- Sitemap on home page
 
 ## Technology Stack — Hard Rules
 
@@ -77,7 +102,7 @@ Git / GitHub
 - MVC uses cookie authentication.
 - API uses JWT Bearer authentication.
 - Identity manages users and roles.
-- Roles: `Admin`, `Organizer`, `Attendee`.
+- Roles: `Admin`, `Organizer`, `Participant` (registered student).
 - Use `[Authorize]` attribute with role-based policies where needed.
 
 ## Agent Rules — MUST
