@@ -1,0 +1,85 @@
+/* Dashboard Styles */
+
+.dashboard {
+  min-height: calc(100vh - 64px);
+  padding: var(--space-7) 0;
+  background: var(--bg-page);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  gap: var(--space-5);
+}
+
+.dashboard-title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.dashboard-subtitle {
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+}
+
+/* Placeholder Content */
+.dashboard-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: var(--space-8);
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.placeholder-icon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-4);
+  color: var(--text-tertiary);
+}
+
+.placeholder-text {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.placeholder-hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: 480px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard-header .button,
+  .dashboard-header > div:last-child {
+    width: 100%;
+  }
+
+  .dashboard-header > div:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .dashboard-placeholder {
+    min-height: 300px;
+    padding: var(--space-6);
+  }
+}

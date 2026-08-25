@@ -1,0 +1,187 @@
+/* Form Components Styles */
+
+/* Input Field */
+.input-field {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--duration-fast);
+}
+
+.input-field:hover {
+  border-color: var(--text-tertiary);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent-brand);
+  box-shadow: 0 0 0 2px rgba(109, 90, 224, 0.2);
+}
+
+.input-field::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input-field:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Field Label */
+.field-label {
+  display: block;
+  margin-bottom: var(--space-5);
+}
+
+.label-text {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+.field-hint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.field-error {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--status-danger);
+  margin-top: var(--space-1);
+}
+
+/* Button Variants */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-family: var(--font-sans);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--duration-base), border-color var(--duration-fast);
+  text-decoration: none;
+  border: none;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  color: var(--accent-primary-text);
+  background: var(--accent-primary);
+}
+
+.button-primary:hover:not(:disabled) {
+  background: rgba(20, 18, 31, 0.92);
+}
+
+.button-secondary {
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-hairline);
+}
+
+.button-secondary:hover:not(:disabled) {
+  background: var(--bg-muted);
+  border-color: var(--text-tertiary);
+}
+
+.button-full {
+  width: 100%;
+}
+
+/* Role Selection Card */
+.role-card {
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 2px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--duration-fast), background var(--duration-fast);
+}
+
+.role-card:hover {
+  background: var(--bg-muted);
+  border-color: var(--text-tertiary);
+}
+
+.role-card.selected {
+  border-color: var(--accent-brand);
+  background: var(--accent-brand-bg);
+}
+
+.role-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.role-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+}
+
+.role-title {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.role-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Radio Button Custom */
+.role-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Checkbox */
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.checkbox-label a {
+  color: var(--accent-brand);
+  text-decoration: none;
+}
+
+.checkbox-label a:hover {
+  text-decoration: underline;
+}
