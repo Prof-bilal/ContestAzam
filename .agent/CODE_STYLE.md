@@ -1,6 +1,6 @@
 # CODE_STYLE.md — Coding Conventions
 
-## C# (Backend)
+## C#
 
 - `PascalCase` for public members, classes, methods, properties.
 - `camelCase` for local variables, parameters, private fields.
@@ -10,12 +10,13 @@
 - Async methods suffixed with `Async`.
 - One class per file.
 
-## ASP.NET Core API
+## ASP.NET Core
 
-- Controllers: inherit `ControllerBase`.
-- Use `[ApiController]` + `[Route("api/[controller]")]`.
+- MVC Controllers: inherit `Controller`.
+- API Controllers: inherit `ControllerBase`.
+- Use `[ValidateAntiForgeryToken]` on all POST actions.
+- Use `[Authorize]` with role parameters where needed.
 - Return `Task<IActionResult>` for async actions.
-- One endpoint per method.
 
 ## Services
 
@@ -24,70 +25,22 @@
 - Constructor injection only.
 - Async/await throughout.
 
-## React / TypeScript
+## Razor Views
 
-- **Components**: Functional only, `PascalCase` filenames.
-- **Files**: `PascalCase.tsx` for components, `camelCase.ts` for utilities.
-- **Props**: TypeScript interfaces, destructure in function signature.
-- **Hooks**: `use` prefix, custom hooks in `hooks/` directory.
-- **State**: `useState`, `useReducer`, Context API.
-- **Styling**: Bootstrap classes, CSS Modules for custom styles.
-
-## TypeScript
-
-- Strict mode enabled.
-- Prefer `interface` over `type` for object shapes.
-- Use `enum` for fixed value sets.
-- Avoid `any` — use `unknown` if type is truly unknown.
-- Export types separately from implementations.
-
-## File Organization
-
-```
-# Backend
-Controllers/    → Thin API controllers
-Services/       → Business logic
-Models/         → Entities
-DTOs/           → Data transfer objects
-Data/           → DbContext, migrations
-
-# Frontend
-components/     → Reusable UI components
-pages/          → Route-level page components
-services/       → API call functions
-context/        → React Context providers
-hooks/          → Custom React hooks
-types/          → TypeScript interfaces
-utils/          → Helper functions
-```
+- `@model` directive at top.
+- Use Tag Helpers for URLs and forms.
+- No business logic in `.cshtml`.
+- Use partials for repeated UI.
+- Use `@section` for scripts/styles.
 
 ## Formatting
 
-### C#
-- 4 spaces indentation.
+- 4 spaces for C# indentation.
 - Braces on new line (Allman style).
 - Blank line between methods.
 
-### TypeScript/React
-- 2 spaces indentation.
-- Single quotes for strings.
-- Semicolons at end of statements.
-- Trailing commas in multiline.
-
-## Comments
-
-- Do not add comments unless requested.
-- Use XML docs for public API surface (backend).
-- Code should be self-documenting.
-
 ## Tests
 
-### C# (xunit)
 - `Arrange / Act / Assert` pattern.
 - Method naming: `MethodName_Scenario_ExpectedResult`.
-
-### TypeScript (Vitest/Jest)
-- `describe` blocks for grouping.
-- `it` or `test` for individual tests.
-- `expect` assertions.
-- Mock API calls with `vi.fn()` or MSW.
+- Use `[Fact]` for single, `[Theory]` for parameterized.

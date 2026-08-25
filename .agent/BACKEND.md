@@ -1,51 +1,41 @@
-# BACKEND.md — ASP.NET Core Web API
+# BACKEND.md — ASP.NET Core Backend
 
 ## Overview
 
-The backend is a pure **ASP.NET Core 8 Web API**. No MVC controllers, no Razor Views. All UI is served by the React frontend.
+The backend is a single ASP.NET Core 8 project with both MVC Controllers (for Razor Views) and Web API Controllers (for JSON endpoints).
 
 ## Project Structure
 
 ```
-EventSphere.Api/
-├── Program.cs                          # Entry point, DI, middleware
-├── Controllers/                        # API Controllers only
-│   ├── AuthController.cs               # Login, register, token refresh
-│   ├── EventsController.cs             # Event CRUD
-│   ├── RegistrationsController.cs      # Event registration
-│   ├── AttendancesController.cs        # QR check-in
-│   ├── CertificatesController.cs       # Certificate management
-│   ├── FeedbackController.cs           # Reviews/feedback
-│   ├── MediaController.cs              # Gallery upload
-│   ├── UsersController.cs              # User management (admin)
-│   ├── NotificationsController.cs      # User notifications
-│   ├── DashboardController.cs          # Admin/organizer analytics
-│   └── VenuesController.cs             # Venue management
+EventSphere.Web/
+├── Program.cs
+├── Controllers/
+│   ├── HomeController.cs           # Landing page
+│   ├── AccountController.cs        # Login, Register, Profile
+│   ├── EventsController.cs         # Event listing, detail, create
+│   ├── TicketsController.cs        # Ticket management
+│   ├── DashboardController.cs      # User/organizer/admin dashboards
+│   ├── GalleryController.cs        # Media gallery
+│   ├── FeedbackController.cs       # Reviews
+│   ├── AdminController.cs          # Admin panel
+│   └── Api/                        # Web API controllers
+│       ├── AuthApiController.cs
+│       ├── EventsApiController.cs
+│       ├── RegistrationsApiController.cs
+│       ├── NotificationsApiController.cs
+│       └── Dtos/
 ├── Services/
-│   ├── Interfaces/                     # Service contracts
-│   │   ├── IAuthService.cs
-│   │   ├── IEventService.cs
-│   │   ├── IRegistrationService.cs
-│   │   ├── IAttendanceService.cs
-│   │   ├── ICertificateService.cs
-│   │   ├── IFeedbackService.cs
-│   │   ├── IMediaService.cs
-│   │   ├── IUserService.cs
-│   │   ├── INotificationService.cs
-│   │   ├── IDashboardService.cs
-│   │   └── IVenueService.cs
-│   └── Implementations/               # Service implementations
+│   ├── Interfaces/
+│   └── Implementations/
 ├── Data/
 │   ├── ApplicationDbContext.cs
 │   └── SeedData.cs
-├── Models/
-│   └── Entities/                       # Domain models
-├── DTOs/                               # Request/Response DTOs
+├── Models/Entities/
+├── ViewModels/
+├── Views/
 ├── Hubs/
-│   └── NotificationHub.cs
-├── Middleware/                          # Custom middleware
-├── appsettings.json
-└── appsettings.Development.json
+├── wwwroot/
+└── appsettings.json
 ```
 
 ## Program.cs Configuration
@@ -60,21 +50,12 @@ builder.Services.AddIdentity<AppUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+// Authentication (Cookie for MVC, JWT for API)
+builder.Services.AddAuthentication()
+    .AddCookie(options => {
+        options.LoginPath = "/Account/Login";
+    })
     .AddJwtBearer(options => { ... });
-
-// CORS for React
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("React", policy =>
-    {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
-});
 
 // Services (DI)
 builder.Services.AddScoped<IEventService, EventService>();
@@ -83,50 +64,38 @@ builder.Services.AddScoped<IEventService, EventService>();
 // SignalR
 builder.Services.AddSignalR();
 
-// API Controllers
-builder.Services.AddControllers();
-```
-
-## Middleware Pipeline
-
-```csharp
-app.UseHttpsRedirection();
-app.UseCors("React");
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-app.MapHub<NotificationHub>("/hubs/notifications");
+// MVC
+builder.Services.AddControllersWithViews();
 ```
 
 ## Layers
 
-### Controller Layer
-- `[ApiController]` + `[Route("api/[controller]")]`
-- Thin controllers — delegate to services
-- `[Authorize]` on protected endpoints
+### MVC Layer
+- Controllers inherit from `Controller`
+- Return `View()` or `RedirectToAction()`
+- Use `[ValidateAntiForgeryToken]` on POST
+- Use `[Authorize]` for protected pages
+
+### API Layer
+- Controllers inherit from `ControllerBase`
+- Use `[ApiController]` + `[Route("api/[controller]")]`
 - Return `Ok()`, `Created()`, `NotFound()`, `BadRequest()`
 
 ### Service Layer
 - Registered as Scoped in DI
 - Handle business logic
-- Async/await throughout
-- Return DTOs or domain objects
+- Use async/await
 
 ### Data Layer
 - `ApplicationDbContext` (EF Core)
 - Entities mapped in `OnModelCreating`
 - Migrations for schema changes
 
-## CORS
+## Team Ownership
 
-- Development: `http://localhost:5173` (Vite default)
-- Production: configured via environment variable
-- Allow credentials for JWT cookies if used
-
-## Configuration
-
-- `appsettings.json` — production config
-- `appsettings.Development.json` — dev overrides
-- Environment variables for secrets in production
-
-> Never commit real secrets. Use placeholders.
+| Area | Owner |
+|---|---|
+| Core architecture, auth, middleware | Abdullah |
+| Database schema, EF Core, data services | Jibran |
+| Shared layout, auth UI | Ramsha |
+| Feature UI, dashboards | Marukh |

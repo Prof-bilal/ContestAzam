@@ -13,6 +13,15 @@ EventSphere is a **College Event Information System** — a full-stack web appli
 | **Organizer (College Staff)** | Creates/manages events, manages registrations, uploads media, issues certificates |
 | **Admin (System Administrator)** | Manages users, approves events, moderates content, sends announcements, generates reports |
 
+### Team
+
+| Member | Role | Module |
+|---|---|---|
+| Abdullah | Backend | Module 1 — Backend Core & Architecture |
+| Jibran | Backend | Module 2 — Database + Data-Heavy Backend |
+| Ramsha | Frontend | Module 3 — Frontend Core + Shared UI |
+| Marukh | Frontend | Module 4 — Frontend Features + Dashboards |
+
 ### Key Features (from SRS)
 
 - Event listing, search, filtering (by category, department, date)
@@ -32,24 +41,28 @@ EventSphere is a **College Event Information System** — a full-stack web appli
 ## Technology Stack — Hard Rules
 
 ```
-Frontend:  React 18+ (Vite, React Router, Axios, Bootstrap/React-Bootstrap)
-Backend:   ASP.NET Core 8 Web API
-Database:  Microsoft SQL Server
-ORM:       Entity Framework Core 8
-Auth:      ASP.NET Core Identity + JWT Bearer
-Real-time: ASP.NET Core SignalR
-Git:       Git / GitHub
+ASP.NET Core 8
+C#
+ASP.NET Core MVC + Razor Views (frontend)
+ASP.NET Core Web API (backend endpoints)
+Entity Framework Core (ORM)
+Microsoft SQL Server (database)
+ASP.NET Core Identity (user management)
+JWT Bearer Authentication (API auth)
+Cookie Authentication (MVC auth)
+ASP.NET Core SignalR (real-time notifications)
+Git / GitHub
 ```
 
-**Frontend is a React SPA. Backend is ASP.NET Core Web API. They are separate projects.**
+**The frontend is built with ASP.NET Core MVC and Razor Views.**
 
-> Do NOT use ASP.NET Core MVC or Razor Views for the frontend. The frontend is React.
+> Do NOT introduce React, Vue, Angular, Next.js, Vite, Svelte, or another frontend framework without explicit authorization.
 
 ## Before Making Changes
 
 1. Read relevant `.agent/` documentation for the area you are modifying.
 2. Inspect the affected files and their dependencies.
-3. Identify which layer the change touches: React, API, Service, Data, or multiple.
+3. Identify which layer the change touches: MVC, API, Service, Data, or multiple.
 4. Understand existing patterns before introducing new ones.
 5. Make the **smallest safe change** that solves the problem.
 6. Avoid unnecessary refactoring.
@@ -57,34 +70,28 @@ Git:       Git / GitHub
 ## Development Rules
 
 ### Naming Conventions
-- API Controllers: `{Entity}Controller` (e.g., `EventsController`)
+- Controllers: `{Entity}Controller` (e.g., `EventsController`)
 - Services: `{Entity}Service` (e.g., `EventService`)
 - Interfaces: `I{Entity}Service` (e.g., `IEventService`)
+- ViewModels: `{View}ViewModel` (e.g., `EventDetailViewModel`)
 - DTOs: `{Entity}Dto` or `{Action}{Entity}Request` (e.g., `CreateEventRequest`)
 - Entities: `{Entity}` (e.g., `Event`, `AppUser`)
-- React Components: `PascalCase` (e.g., `EventCard.tsx`)
-- React Hooks: `use` prefix (e.g., `useEvents.ts`)
-- React Pages: `PascalCasePage` (e.g., `EventDetailPage.tsx`)
+- Razor Views: Match action name (e.g., `Index.cshtml`, `Details.cshtml`)
 
-### Backend Rules (ASP.NET Core Web API)
-- Controllers inherit from `ControllerBase`.
-- Use `[ApiController]` + `[Route("api/[controller]")]`.
-- Use DTOs for all request/response — never expose raw entities.
+### MVC Rules
+- Keep controllers thin — delegate to services.
+- Use ViewModels for complex view data, never pass entities directly to views.
+- Keep all business logic in service classes.
+- Never put database queries inside Razor Views (`.cshtml`).
+- Reuse `_Layout.cshtml`, partials, and tag helpers.
+- Use `[ValidateAntiForgeryToken]` on all POST actions.
+
+### API Rules
+- Use DTOs for request/response.
 - Validate input with model validation.
 - Return appropriate HTTP status codes (200, 201, 400, 401, 403, 404).
 - Use `[Authorize]` where authentication is required.
-- Keep controllers thin — delegate to services.
-
-### Frontend Rules (React)
-- Use functional components with hooks.
-- Use React Router for client-side routing.
-- Use Axios for HTTP requests to the API.
-- Use Context API or Zustand for state management.
-- Use React Bootstrap or Tailwind for styling.
-- Component files: `.tsx`. Logic files: `.ts`.
-- Keep components small and focused.
-- Extract reusable components into `components/`.
-- API calls go in `services/` or `api/` directory.
+- Follow existing route conventions (`api/[controller]`).
 
 ### Service Rules
 - Services are registered in `Program.cs` via DI.
@@ -100,12 +107,11 @@ Git:       Git / GitHub
 - Never run destructive migrations without authorization.
 
 ### Authentication Rules
-- **Primary auth: JWT Bearer** (used by React frontend via API).
-- ASP.NET Core Identity manages users and roles.
+- MVC uses cookie authentication.
+- API uses JWT Bearer authentication.
+- Identity manages users and roles.
 - Roles: `Admin`, `Organizer`, `Participant`.
-- JWT token stored in localStorage/sessionStorage by React.
-- React sends `Authorization: Bearer {token}` header on protected requests.
-- CORS configured for React dev server origin.
+- Use `[Authorize]` attribute with role-based policies where needed.
 
 ## Agent Rules — MUST
 
@@ -121,6 +127,7 @@ Git:       Git / GitHub
 ## Agent Rules — MUST NOT
 
 - Rewrite the application unnecessarily.
+- Introduce another frontend framework.
 - Replace SQL Server with another database.
 - Replace Entity Framework Core.
 - Introduce microservices without justification.
@@ -138,7 +145,7 @@ Understand → Inspect → Plan → Implement → Test → Review → Verify →
 
 ## Definition of Done
 
-- Code compiles without errors (both backend and frontend).
+- Code compiles without errors.
 - Existing tests pass.
 - New behavior has corresponding tests.
 - No security regressions.
