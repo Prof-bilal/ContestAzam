@@ -4,12 +4,13 @@
 
 ## Quick Rules
 
-1. **Tech stack**: ASP.NET Core 8, C#, MVC + Razor Views, Web API, EF Core, SQL Server, Identity, JWT, SignalR.
-2. **Frontend is ASP.NET Core MVC + Razor Views** — no React/Vue/Angular.
-3. **Read `.agent/` docs** before making changes.
-4. **Make smallest safe change** that solves the problem.
-5. **Never commit secrets**.
-6. **Run `dotnet test`** before completing work.
+1. **Tech stack**: ASP.NET Core 8, C#, React 18+ (Vite), Web API, EF Core, SQL Server, Identity, JWT, SignalR.
+2. **Frontend is React SPA** — not MVC, not Razor Views.
+3. **Backend is Web API only** — no MVC controllers.
+4. **Read `.agent/` docs** before making changes.
+5. **Make smallest safe change** that solves the problem.
+6. **Never commit secrets**.
+7. **Run `dotnet test` AND `npm test`** before completing work.
 
 ## Documentation
 
@@ -17,10 +18,10 @@
 |---|---|
 | Operating Manual | `.agent/AGENTS.md` |
 | Architecture | `.agent/ARCHITECTURE.md` |
-| Backend | `.agent/BACKEND.md` |
-| Frontend | `.agent/FRONTEND.md` |
+| Backend (API) | `.agent/BACKEND.md` |
+| Frontend (React) | `.agent/FRONTEND.md` |
 | Database | `.agent/DATABASE.md` |
-| API | `.agent/API.md` |
+| API Conventions | `.agent/API.md` |
 | Testing | `.agent/TESTING.md` |
 | Security | `.agent/SECURITY.md` |
 | GitHub | `.agent/GITHUB.md` |

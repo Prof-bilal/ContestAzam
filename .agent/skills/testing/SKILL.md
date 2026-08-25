@@ -1,21 +1,27 @@
 # testing/SKILL.md — Write and Run Tests
 
-## Purpose
+## Backend
 
-Guide agents to add, modify, and run tests.
+```bash
+dotnet test
+```
 
-## Team Testing
+## Frontend
+
+```bash
+cd EventSphere.React && npm test
+```
+
+## Team
 
 | Member | Tests |
 |---|---|
-| Abdullah | Backend service + API tests |
-| Jibran | Database + data service tests |
-| Ramsha | Frontend core (if applicable) |
-| Marukh | Feature UI tests (if applicable) |
+| Abdullah | Backend service + API |
+| Jibran | Database + data service |
+| Ramsha | Frontend components |
+| Marukh | Feature pages |
 
 ## Rules
 
-- Never delete existing tests.
-- Never weaken assertions.
-- Use `Arrange / Act / Assert`.
-- Run `dotnet test` before committing.
+- Never delete tests.
+- Run both `dotnet test` AND `npm test`.

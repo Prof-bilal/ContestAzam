@@ -27,7 +27,7 @@
 | Identity setup | ASP.NET Core Identity, user/role seeding |
 | JWT authentication | Token generation, validation, middleware |
 | Auth API endpoints | Login, register, logout, token refresh |
-| Core middleware | Error handling, logging, CORS |
+| Core middleware | Error handling, logging, CORS for React |
 | API conventions | Response format, status codes, validation |
 | SignalR setup | Hub architecture for notifications |
 
@@ -46,14 +46,16 @@
 
 | Task | Description |
 |---|---|
-| Layout | `_Layout.cshtml` — navbar, footer, sidebar |
-| Shared partials | `_LoginPartial`, `_EventCard`, alerts |
-| CSS architecture | Bootstrap setup, custom variables, responsive base |
+| Project setup | Vite + React + TypeScript scaffold |
+| Routing | React Router v6 with route structure |
+| Layout | `App.tsx` — navbar, footer, sidebar |
+| Auth context | AuthContext for JWT, login/logout, user state |
+| Axios config | Axios instance with JWT interceptor, base URL |
+| Protected routes | `ProtectedRoute` component with role-based access |
 | Home page | Landing page with hero, stats, upcoming events |
 | About/Contact pages | Static informational pages |
-| Authentication UI | Login, register views |
-| Shared forms | Form styles, validation states, buttons |
-| Shared components | Cards, tables, modals, loading states |
+| Authentication pages | Login, register forms |
+| Shared components | Cards, tables, modals, loading states, alerts |
 
 ### Marukh — Frontend Support
 
@@ -282,7 +284,7 @@ Week  7-8  ████████████████  Phase 4: Polish & D
 Phase 1 (Foundation)
 ├── Abdullah: Auth + API shell
 ├── Jibran: Database + entities
-├── Ramsha: Layout + auth UI
+├── Ramsha: React project + routing + shared components
 └── Marukh: Static pages
 
         ↓
@@ -338,7 +340,7 @@ main
 ├── develop
 │   ├── feature/abdullah-auth
 │   ├── feature/jibran-database
-│   ├── feature/ramsha-layout
+│   ├── feature/ramsha-react-setup
 │   ├── feature/marukh-sitemap
 │   ├── feature/abdullah-events-api
 │   ├── feature/jibran-registration
@@ -355,7 +357,7 @@ A phase is complete when:
 
 - All tasks in the phase are done
 - Backend compiles and tests pass
-- Frontend renders and forms work
+- React app builds and renders
 - API endpoints respond correctly
 - Database migrations are clean
 - No regression in previous phases

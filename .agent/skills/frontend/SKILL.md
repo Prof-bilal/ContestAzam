@@ -1,34 +1,29 @@
-# frontend/SKILL.md — Modify MVC/Razor Frontend
+# frontend/SKILL.md — Modify React SPA
 
 ## Purpose
 
-Guide agents to safely modify MVC Controllers, Razor Views, ViewModels, and shared UI.
-
-## When To Use
-
-- Adding or modifying a view.
-- Changing controller actions that serve views.
-- Adding ViewModels.
-- Changing layouts, partials, or styles.
+Guide agents to safely modify React components, pages, services, hooks, and styling.
 
 ## Module Ownership
 
-- **Ramsha (Module 3)**: Layout, shared components, auth UI, event listing
-- **Marukh (Module 4)**: Feature pages, dashboards, event forms
+- **Ramsha (Module 3)**: Layout, shared components, auth pages
+- **Marukh (Module 4)**: Feature pages, dashboards, workflows
 
 ## Rules
 
-- **NEVER introduce React, Vue, Angular, or SPA frameworks.**
-- Use Tag Helpers for URLs.
-- Use ViewModels — never pass raw entities to views.
-- Keep business logic out of `.cshtml` files.
-- Use `[ValidateAntiForgeryToken]` on POST actions.
-- Use partials for repeated UI.
-- Ramsha owns shared components; Marukh consumes them.
+- Functional components only (no class components).
+- TypeScript (`.tsx` for components, `.ts` for logic).
+- API calls in `services/` directory.
+- Use Axios instance from `api/axios.ts`.
+- Handle loading and error states.
+- Use `ProtectedRoute` for auth routes.
+- Never use `dangerouslySetInnerHTML` with untrusted content.
 
 ## Verification
 
 ```bash
-dotnet build
-dotnet run --project EventSphere.Web
+cd EventSphere.React
+npm run build
+npm test
+npm run dev
 ```

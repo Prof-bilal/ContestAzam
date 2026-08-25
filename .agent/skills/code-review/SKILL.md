@@ -1,21 +1,17 @@
 # code-review/SKILL.md — Review Code Changes
 
-## Purpose
-
-Review code for correctness, security, and quality.
-
 ## Review Pairing
 
-- **Abdullah ↔ Jibran** (backend reviews)
-- **Ramsha ↔ Marukh** (frontend reviews)
-- **Cross-layer**: at least one backend + one frontend reviewer
+- **Abdullah ↔ Jibran** (backend)
+- **Ramsha ↔ Marukh** (frontend)
+- **Cross-layer**: at least one from each side
 
 ## Checklist
 
 - [ ] Code does what it claims
-- [ ] Follows layered architecture
+- [ ] Backend: Controller → Service → Data
+- [ ] Frontend: Page → Component → Service → API
 - [ ] No hardcoded secrets
 - [ ] Auth/authorization correct
-- [ ] Input validated
 - [ ] Tests exist
-- [ ] No breaking changes to API contracts
+- [ ] No breaking API changes

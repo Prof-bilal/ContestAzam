@@ -1,38 +1,15 @@
 # TESTING.md — Testing Strategy
 
-## Framework
-
-- **Test Framework**: xunit
+## Backend (C#)
+- **Framework**: xunit
 - **Mocking**: Moq
 - **In-Memory DB**: Microsoft.EntityFrameworkCore.InMemory
-- **Runner**: `dotnet test`
+- **Run**: `dotnet test`
 
-## Project
-
-```
-EventSphere.Tests/
-├── Unit/           # Unit tests for services
-└── Integration/    # Integration tests
-```
-
-## Test Types
-
-### Unit Tests
-- Test service methods in isolation.
-- Mock `ApplicationDbContext` using InMemory provider.
-- File naming: `{ServiceName}Tests.cs`
-
-### Integration Tests
-- Use InMemory EF Core provider.
-- Test full request pipeline where needed.
-- File naming: `{Feature}IntegrationTests.cs`
-
-## Running Tests
-
-```bash
-dotnet test
-dotnet test --filter "FullyQualifiedName~EventServiceTests"
-```
+## Frontend (React/TypeScript)
+- **Framework**: Vitest
+- **Component Testing**: @testing-library/react
+- **Run**: `cd EventSphere.React && npm test`
 
 ## Team Testing
 
@@ -40,11 +17,10 @@ dotnet test --filter "FullyQualifiedName~EventServiceTests"
 |---|---|
 | Abdullah | Backend service + API tests |
 | Jibran | Database + data service tests |
-| Ramsha | Frontend core (if applicable) |
-| Marukh | Feature UI tests (if applicable) |
+| Ramsha | Frontend component tests |
+| Marukh | Feature page tests |
 
 ## Rules
 
 - Never delete existing tests.
-- Never weaken assertions.
-- Run tests before committing.
+- Run `dotnet test` AND `npm test` before committing.

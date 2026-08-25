@@ -1,18 +1,13 @@
-# debugging/SKILL.md — Debug ASP.NET Core App
+# debugging/SKILL.md — Debug Full-Stack App
 
-## Purpose
+## Identify Layer
 
-Systematically diagnose issues in the ASP.NET Core MVC + API application.
-
-## Common Issues
-
-| Symptom | Likely Cause |
+| Symptom | Layer |
 |---|---|
-| View not found | Wrong view name, missing `_ViewImports` |
-| 401 Unauthorized | JWT token expired, wrong key |
-| DI error | Missing registration in `Program.cs` |
-| EF Core error | Missing `Include()`, FK violation |
-| Model validation failed | Missing `[Required]`, wrong field names |
+| 500 error | Backend |
+| White screen | Frontend |
+| 401/403, CORS | Auth |
+| Data missing | Both |
 
 ## Rules
 

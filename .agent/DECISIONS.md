@@ -1,84 +1,79 @@
 # DECISIONS.md — Architecture Decision Records
 
-## ADR-001 — Use ASP.NET Core MVC + Razor for Frontend
+## ADR-001 — Use React for Frontend
 
 ### Status
 Accepted
 
-### Context
-EventSphere needs a frontend for browsing and managing events.
-
 ### Decision
-Use ASP.NET Core MVC with Razor Views for the frontend. No separate SPA framework.
+React 18+ with Vite, React Router, TypeScript as frontend. ASP.NET Core Web API as backend.
 
 ### Consequences
-- Single technology stack.
-- Server-rendered HTML (good SEO, fast initial load).
-- No client-side routing complexity.
-- All UI logic stays in C# / Razor.
+- Clear separation of frontend and backend.
+- Rich interactivity and component reuse.
+- CORS configuration required.
+- JWT authentication (stateless).
 
 ---
 
-## ADR-002 — Use Entity Framework Core as ORM
+## ADR-002 — ASP.NET Core Web API (No MVC)
 
 ### Status
 Accepted
 
 ### Decision
-Use EF Core with Code-First approach.
-
-### Consequences
-- Migrations for schema versioning.
-- LINQ queries (type-safe).
-- Migrations must be reviewed before deployment.
+Pure Web API. No MVC controllers, no Razor Views.
 
 ---
 
-## ADR-003 — Dual Authentication (Cookie + JWT)
+## ADR-003 — JWT Bearer as Primary Auth
 
 ### Status
 Accepted
 
 ### Decision
-- MVC uses Cookie authentication.
-- API uses JWT Bearer authentication.
-- Both share ASP.NET Core Identity.
+JWT Bearer authentication. Token stored in localStorage. Sent via `Authorization` header.
 
 ---
 
-## ADR-004 — Use SignalR for Real-Time
+## ADR-004 — Entity Framework Core + SQL Server
 
 ### Status
 Accepted
 
 ### Decision
-Use ASP.NET Core SignalR for push notifications.
+EF Core with Code-First approach.
 
 ---
 
-## ADR-005 — Service Layer Pattern
+## ADR-005 — Vite as Build Tool
 
 ### Status
 Accepted
 
 ### Decision
-Implement service layer between controllers and EF Core.
-
-### Consequences
-- Controllers stay thin.
-- Business logic testable in isolation.
+Vite for React development and build.
 
 ---
 
-## ADR-006 — 4-Person Team with Module Ownership
+## ADR-006 — SignalR for Real-Time
 
 ### Status
 Accepted
 
 ### Decision
-Team divided into 2 backend (Abdullah, Jibran) and 2 frontend (Ramsha, Marukh) with clear module boundaries.
+ASP.NET Core SignalR with React client (`@microsoft/signalr`).
+
+---
+
+## ADR-007 — 4-Person Team with Module Ownership
+
+### Status
+Accepted
+
+### Decision
+2 backend (Abdullah, Jibran) + 2 frontend (Ramsha, Marukh) with clear module boundaries.
 
 ### Consequences
 - Clear ownership reduces conflicts.
-- Cross-module changes require coordination.
-- API contracts must be agreed before implementation.
+- API contracts agreed before implementation.

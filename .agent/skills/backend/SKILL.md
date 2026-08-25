@@ -1,8 +1,4 @@
-# backend/SKILL.md — Modify ASP.NET Core Backend
-
-## Purpose
-
-Guide agents to safely modify controllers, services, middleware, DI, auth, and business logic.
+# backend/SKILL.md — Modify ASP.NET Core Web API
 
 ## Module Ownership
 
@@ -11,17 +7,16 @@ Guide agents to safely modify controllers, services, middleware, DI, auth, and b
 
 ## Rules
 
-- Controllers inherit `Controller` (MVC) or `ControllerBase` (API).
-- Always modify interface and implementation together.
-- Services are Scoped.
-- Use constructor injection.
+- Controllers inherit `ControllerBase`.
+- `[ApiController]` + `[Route("api/[controller]")]`.
+- DTOs for request/response.
+- `[Authorize]` on protected endpoints.
+- Services registered as Scoped.
 - Async/await throughout.
-- Use `[Authorize]` on protected endpoints.
-- Use `[ValidateAntiForgeryToken]` on MVC POST actions.
 
 ## Verification
 
 ```bash
-dotnet build
+dotnet build EventSphere.Api
 dotnet test
 ```

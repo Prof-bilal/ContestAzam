@@ -1,112 +1,94 @@
-# FRONTEND.md — ASP.NET Core MVC + Razor Views
+# FRONTEND.md — React SPA
 
 ## Overview
 
-EventSphere's frontend is built entirely within the ASP.NET Core ecosystem using **MVC Controllers and Razor Views**. There is no separate SPA framework.
+EventSphere frontend is a **React 18+ SPA** built with Vite. Communicates with ASP.NET Core Web API over HTTP/JSON.
 
-> There is NO React, Vue, Angular, Next.js, or Vite frontend.
+> NO ASP.NET Core MVC or Razor Views.
+
+## Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| React 18+ | UI library |
+| TypeScript | Type safety |
+| Vite | Build tool / dev server |
+| React Router v6 | Client-side routing |
+| Axios | HTTP client |
+| React Bootstrap | UI components |
+| Context API | State management |
+| @microsoft/signalr | Real-time client |
+
+## Project Structure
+
+```
+EventSphere.React/src/
+├── api/axios.ts
+├── components/
+│   ├── common/          # Navbar, Footer, Loader, ProtectedRoute
+│   ├── events/          # EventCard, EventForm, EventFilters
+│   ├── gallery/         # GalleryGrid, MediaUpload
+│   ├── dashboard/       # StatsCard, Charts
+│   └── reviews/         # ReviewForm, StarRating
+├── pages/
+│   ├── Home.tsx
+│   ├── Events.tsx
+│   ├── EventDetail.tsx
+│   ├── Login.tsx
+│   ├── Register.tsx
+│   ├── Dashboard.tsx
+│   ├── MyRegistrations.tsx
+│   ├── Gallery.tsx
+│   ├── AdminPanel.tsx
+│   └── NotFound.tsx
+├── context/
+│   ├── AuthContext.tsx
+│   └── NotificationContext.tsx
+├── hooks/
+├── services/
+│   ├── authService.ts
+│   ├── eventService.ts
+│   └── ...
+├── types/index.ts
+├── App.tsx
+└── main.tsx
+```
 
 ## Team Ownership
 
 | Area | Owner |
 |---|---|
-| Layout, shared components, auth UI | **Ramsha** (Module 3) |
+| Layout, shared components, auth pages | **Ramsha** (Module 3) |
 | Feature pages, dashboards, workflows | **Marukh** (Module 4) |
 
-## Structure
+## Routing
 
-```
-Views/
-├── _ViewImports.cshtml        # Global imports (Tag Helpers)
-├── _ViewStart.cshtml          # Layout assignment
-├── Shared/
-│   ├── _Layout.cshtml         # Main layout (navbar, footer)
-│   ├── _LoginPartial.cshtml   # Auth-aware nav links
-│   └── Partials/
-│       ├── _EventCard.cshtml  # Reusable event card
-│       ├── _Pagination.cshtml # Page controls
-│       └── _Alerts.cshtml     # Flash messages
-├── Home/
-│   └── Index.cshtml           # Landing page
-├── Events/
-│   ├── Index.cshtml           # Event listing with filters
-│   ├── Details.cshtml         # Event detail page
-│   ├── Create.cshtml          # Create event form
-│   ├── Edit.cshtml            # Edit event form
-│   └── MyEvents.cshtml        # User's events
-├── Account/
-│   ├── Login.cshtml
-│   ├── Register.cshtml
-│   └── Profile.cshtml
-├── Dashboard/
-│   ├── Index.cshtml           # User dashboard
-│   ├── Organizer.cshtml       # Organizer dashboard
-│   └── Admin.cshtml           # Admin dashboard
-├── Tickets/
-│   ├── Index.cshtml           # User tickets
-│   └── Details.cshtml         # Ticket detail/QR
-├── Gallery/
-│   └── Index.cshtml           # Media gallery
-├── Feedback/
-│   └── Create.cshtml          # Review form
-├── Admin/
-│   ├── Users.cshtml           # User management
-│   ├── Events.cshtml          # Event approval
-│   └── Reports.cshtml         # Reports
-wwwroot/
-├── css/site.css               # Custom styles
-├── js/site.js                 # Custom JS
-├── lib/bootstrap/             # Bootstrap CSS/JS
-└── images/                    # Static images
+```tsx
+<Routes>
+  <Route path="/" element={<Home />} />
+  <Route path="/events" element={<Events />} />
+  <Route path="/events/:id" element={<EventDetail />} />
+  <Route path="/login" element={<Login />} />
+  <Route path="/register" element={<Register />} />
+  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+  <Route path="/admin" element={<ProtectedRoute role="Admin"><AdminPanel /></ProtectedRoute>} />
+  <Route path="*" element={<NotFound />} />
+</Routes>
 ```
 
-## Layout
+## Auth Flow
 
-- `_Layout.cshtml` wraps all pages.
-- Contains navbar with brand, navigation, auth links.
-- Bootstrap 5 for responsive grid and components.
-- Bootstrap Icons for iconography.
-- Footer with copyright and sitemap link.
-
-## Partial Views
-
-| Partial | Purpose | Owner |
-|---|---|---|
-| `_LoginPartial.cshtml` | Auth-aware navbar | Ramsha |
-| `_EventCard.cshtml` | Reusable event card | Ramsha |
-| `_Pagination.cshtml` | Page controls | Ramsha |
-| `_Alerts.cshtml` | Flash messages | Ramsha |
-
-## ViewModels
-
-| ViewModel | Used By | Owner |
-|---|---|---|
-| `HomeIndexViewModel` | Home/Index | Ramsha |
-| `EventListViewModel` | Events/Index | Ramsha |
-| `EventDetailViewModel` | Events/Details | Marukh |
-| `CreateEventViewModel` | Events/Create | Marukh |
-| `DashboardViewModel` | Dashboard/Index | Marukh |
-| `AdminDashboardViewModel` | Dashboard/Admin | Marukh |
-
-## Tag Helpers
-
-- `asp-controller`, `asp-action` — URL generation
-- `asp-route-id`, `asp-route-page` — route parameters
-- `asp-validation-for` — client-side validation messages
-- `asp-append-version` — cache busting
-
-## Forms
-
-- All POST forms use `method="post"` with `[ValidateAntiForgeryToken]`.
-- Client-side validation via jQuery Unobtrusive Validation.
-- Shared form styles in `site.css`.
+1. Login → POST `/api/auth/login` → JWT token
+2. Token stored in localStorage
+3. Axios interceptor attaches `Authorization: Bearer {token}`
+4. On 401 → redirect to `/login`
+5. AuthContext provides `user`, `token`, `login()`, `logout()`
 
 ## Rules
 
-- Never add React, Vue, Angular, or SPA frameworks.
-- Always use Tag Helpers for URLs.
-- Always use ViewModels — never pass raw entities to views.
-- Keep business logic out of `.cshtml` files.
-- Use partials for repeated UI components.
-- Use `TempData` for flash messages.
-- Ramsha owns shared components; Marukh consumes them.
+- Functional components only.
+- TypeScript strict mode.
+- All API calls through `services/` layer.
+- Handle loading and error states.
+- Use `ProtectedRoute` for auth routes.
+- Bootstrap for styling.

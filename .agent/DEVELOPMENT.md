@@ -3,30 +3,28 @@
 ## Prerequisites
 
 - .NET 8 SDK
+- Node.js 18+ and npm
 - SQL Server (LocalDB or full instance)
-- IDE: Visual Studio 2022, JetBrains Rider, or VS Code
 - Git
 
-## Setup
+## Backend Setup
 
 ```bash
-# Clone repository
-git clone <repo-url>
-cd EventSphere
-
-# Restore packages
 dotnet restore
-
-# Update connection string in appsettings.Development.json
-
-# Run migrations
-dotnet ef database update --project EventSphere.Web
-
-# Run application
-dotnet run --project EventSphere.Web
+dotnet ef database update --project EventSphere.Api
+dotnet run --project EventSphere.Api
+# API at https://localhost:5001
 ```
 
-Application starts at `https://localhost:5001` or `http://localhost:5000`.
+## Frontend Setup
+
+```bash
+cd EventSphere.React
+npm install
+echo "VITE_API_URL=http://localhost:5001" > .env
+npm run dev
+# React at http://localhost:5173
+```
 
 ## Default Accounts
 
@@ -39,55 +37,7 @@ Application starts at `https://localhost:5001` or `http://localhost:5000`.
 ## Common Commands
 
 ```bash
-# Build
-dotnet build
-
-# Run
-dotnet run --project EventSphere.Web
-
-# Run tests
+dotnet build EventSphere.sln
 dotnet test
-
-# Add migration
-dotnet ef migrations add <Name> --project EventSphere.Web
-
-# Update database
-dotnet ef database update --project EventSphere.Web
-
-# Check vulnerabilities
-dotnet list package --vulnerable
+cd EventSphere.React && npm run build && npm test
 ```
-
-## Team Setup
-
-Each team member works on their own feature branch:
-
-```bash
-# Abdullah
-git checkout -b feature/abdullah-auth
-
-# Jibran
-git checkout -b feature/jibran-database
-
-# Ramsha
-git checkout -b feature/ramsha-layout
-
-# Marukh
-git checkout -b feature/marukh-sitemap
-```
-
-See `.agent/PHASES.md` for full phase breakdown.
-
-## Troubleshooting
-
-### Build fails
-- Run `dotnet restore` first.
-- Check .NET SDK version: `dotnet --list-sdks`.
-
-### Database connection fails
-- Verify SQL Server is running.
-- Check connection string in `appsettings.Development.json`.
-
-### Migration errors
-- Remove `bin/` and `obj/` folders.
-- Re-run `dotnet restore`.

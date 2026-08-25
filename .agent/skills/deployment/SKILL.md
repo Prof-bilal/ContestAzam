@@ -1,27 +1,23 @@
 # deployment/SKILL.md — Deploy Safely
 
-## Pre-Deployment
+## Backend
 
 ```bash
-dotnet build EventSphere.sln --configuration Release
+dotnet publish EventSphere.Api -c Release -o ./publish-api
+```
+
+## Frontend
+
+```bash
+cd EventSphere.React && npm run build
+# Output in dist/
+```
+
+## Pre-Deploy
+
+```bash
 dotnet test
+cd EventSphere.React && npm test
 dotnet list package --vulnerable
+cd EventSphere.React && npm audit
 ```
-
-## Publish
-
-```bash
-dotnet publish EventSphere.Web -c Release -o ./publish
-```
-
-## Database
-
-```bash
-dotnet ef database update --project EventSphere.Web
-```
-
-## Rules
-
-- Never deploy without running tests.
-- Never deploy hardcoded secrets.
-- Verify migrations before applying.
