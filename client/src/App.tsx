@@ -20,6 +20,10 @@ import { MyRegistrations } from "./pages/MyRegistrations";
 import { EventAttendees } from "./pages/EventAttendees";
 import { AdminEvents } from "./pages/AdminEvents";
 import { OrganizerCategories } from "./pages/OrganizerCategories";
+import { PaymentSuccess } from "./pages/PaymentSuccess";
+import { PaymentCancel } from "./pages/PaymentCancel";
+import { DigitalPass } from "./pages/DigitalPass";
+import { QrCheckIn } from "./pages/QrCheckIn";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { GuestRoute } from "./components/GuestRoute";
 
@@ -43,12 +47,18 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/my-registrations" element={<ProtectedRoute><MyRegistrations /></ProtectedRoute>} />
+      <Route path="/my-registrations/:id/pass" element={<ProtectedRoute><DigitalPass /></ProtectedRoute>} />
+
+      {/* Payment pages */}
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
 
       {/* Organizer pages */}
       <Route path="/organizer/events" element={<ProtectedRoute><OrganizerDashboard /></ProtectedRoute>} />
       <Route path="/organizer/events/create" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/edit" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
       <Route path="/organizer/events/:id/attendees" element={<ProtectedRoute><EventAttendees /></ProtectedRoute>} />
+      <Route path="/organizer/events/:eventId/check-in" element={<ProtectedRoute><QrCheckIn /></ProtectedRoute>} />
       <Route path="/organizer/categories" element={<ProtectedRoute><OrganizerCategories /></ProtectedRoute>} />
 
       {/* Admin pages */}

@@ -27,6 +27,7 @@ builder.Services.Configure<RefreshTokenOptions>(config.GetSection(RefreshTokenOp
 builder.Services.Configure<FrontendOptions>(config.GetSection(FrontendOptions.SectionName));
 builder.Services.Configure<BrevoOptions>(config.GetSection(BrevoOptions.SectionName));
 builder.Services.Configure<RateLimitOptions>(config.GetSection(RateLimitOptions.SectionName));
+builder.Services.Configure<StripeOptions>(config.GetSection(StripeOptions.SectionName));
 var frontend = config.GetSection(FrontendOptions.SectionName).Get<FrontendOptions>() ?? new FrontendOptions();
 
 // ---------- Database ----------
@@ -124,6 +125,9 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IEngagementService, EngagementService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 
 // ---------- Email service ----------
 if (env.IsEnvironment("Testing"))

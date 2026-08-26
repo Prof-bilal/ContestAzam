@@ -12,11 +12,13 @@ namespace EventSphere.Api.Controllers;
 public class ParticipantController : ControllerBase
 {
     private readonly IEngagementService _engagement;
+    private readonly IAttendanceService _attendanceService;
     private readonly ILogger<ParticipantController> _logger;
 
-    public ParticipantController(IEngagementService engagement, ILogger<ParticipantController> logger)
+    public ParticipantController(IEngagementService engagement, IAttendanceService attendanceService, ILogger<ParticipantController> logger)
     {
         _engagement = engagement;
+        _attendanceService = attendanceService;
         _logger = logger;
     }
 
@@ -50,6 +52,21 @@ public class ParticipantController : ControllerBase
         if (!cancelled) return NotFound(ApiResponse.Fail("Registration not found or already cancelled."));
 
         return Ok(ApiResponse.Ok("Registration cancelled."));
+    }
+
+    // ───────────────────────────── Digital Pass ─────────────────────────────
+
+    /// <summary>Get digital pass with QR code for a registration.</summary>
+    [HttpGet("registrations/{id:int}/pass")]
+    public async Task<IActionResult> GetDigitalPass(int id)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var pass = await _attendanceService.GetDigitalPassAsync(id, userId.Value);
+        if (pass is null) return NotFound(ApiResponse.Fail("Registration not found."));
+
+        return Ok(ApiResponse<DigitalPassDto>.Ok(pass));
     }
 
     // ───────────────────────────── Favorites ─────────────────────────────

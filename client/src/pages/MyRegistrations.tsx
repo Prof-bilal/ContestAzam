@@ -64,7 +64,12 @@ export function MyRegistrations() {
                   <td>{new Date(reg.registeredOn).toLocaleDateString()}</td>
                   <td>
                     {reg.status === "Confirmed" && (
-                      <button className="btn btn-danger btn-small" onClick={() => handleCancel(reg)}>Cancel</button>
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        <Link to={`/my-registrations/${reg.id}/pass`} className="btn btn-primary btn-small" style={{ width: "auto", marginTop: 0 }}>
+                          View Pass
+                        </Link>
+                        <button className="btn btn-danger btn-small" onClick={() => handleCancel(reg)}>Cancel</button>
+                      </div>
                     )}
                   </td>
                 </tr>

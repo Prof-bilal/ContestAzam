@@ -4,7 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/Toast";
 import {
   getEvent, getEventReviews, registerForEvent,
-  submitReview,
+  submitReview, createCheckoutSession,
 } from "../api/client";
 import type { EventSummary, EventReviewSummary } from "../types";
 
@@ -44,8 +44,14 @@ export function EventDetails() {
   }, [eventId]);
 
   const handleRegister = async () => {
+    if (!event) return;
     setRegistering(true);
     try {
+      if (event.isPaid) {
+        const { url } = await createCheckoutSession(eventId);
+        window.location.href = url;
+        return;
+      }
       await registerForEvent(eventId);
       addToast("success", "Successfully registered for the event!");
       setShowRegModal(false);
@@ -135,6 +141,12 @@ export function EventDetails() {
               <span>{new Date(event.registrationDeadline).toLocaleString()}</span>
             </div>
           )}
+          <div className="event-info-item">
+            <span className="event-info-label">Price</span>
+            <span className={event.isPaid ? "event-price-paid" : "event-price-free"}>
+              {event.isPaid ? `$${event.price.toFixed(2)}` : "Free"}
+            </span>
+          </div>
         </div>
 
         {event.description && (
@@ -175,7 +187,7 @@ export function EventDetails() {
 
           {canRegister && (
             <button className="btn btn-primary" onClick={() => setShowRegModal(true)} style={{ width: "auto", marginTop: 0 }}>
-              Register for Event
+              {event.isPaid ? `Pay $${event.price.toFixed(2)} to Register` : "Register for Event"}
             </button>
           )}
 
@@ -267,11 +279,12 @@ export function EventDetails() {
               {event.venue && <div>Venue: {event.venue}</div>}
               <div>Date: {new Date(event.eventDate).toLocaleDateString()}</div>
               <div>Time: {event.eventTime}</div>
+              {event.isPaid && <div style={{ fontWeight: 600, color: "var(--primary)" }}>Price: ${event.price.toFixed(2)}</div>}
               {spotsLeft <= 5 && <div style={{ color: "var(--danger)" }}>Only {spotsLeft} spot(s) left!</div>}
             </div>
             <div style={{ display: "flex", gap: "0.5rem" }}>
               <button className="btn btn-primary btn-small" onClick={handleRegister} disabled={registering} style={{ width: "auto", marginTop: 0 }}>
-                {registering ? "Registering..." : "Confirm Registration"}
+                {registering ? "Processing..." : event.isPaid ? `Pay $${event.price.toFixed(2)}` : "Confirm Registration"}
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => setShowRegModal(false)}>
                 Cancel

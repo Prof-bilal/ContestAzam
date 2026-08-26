@@ -81,6 +81,8 @@ public class EventService : IEventService
             MaxParticipants = request.MaxParticipants,
             ImageUrl = request.ImageUrl?.Trim(),
             RegistrationDeadline = request.RegistrationDeadline,
+            IsPaid = request.IsPaid,
+            Price = request.Price,
             Status = request.SaveAsDraft ? EventStatus.Draft : EventStatus.PendingApproval,
             CreatedAt = DateTime.UtcNow
         };
@@ -110,6 +112,8 @@ public class EventService : IEventService
         evt.MaxParticipants = request.MaxParticipants;
         evt.ImageUrl = request.ImageUrl?.Trim();
         evt.RegistrationDeadline = request.RegistrationDeadline;
+        evt.IsPaid = request.IsPaid;
+        evt.Price = request.Price;
         evt.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
@@ -441,6 +445,8 @@ public class EventService : IEventService
             Status = e.Status.ToString(),
             ImageUrl = e.ImageUrl,
             RegistrationDeadline = e.RegistrationDeadline,
+            IsPaid = e.IsPaid,
+            Price = e.Price,
             CreatedAt = e.CreatedAt,
             UpdatedAt = e.UpdatedAt,
             IsRegistered = currentUserId.HasValue && e.Registrations != null &&

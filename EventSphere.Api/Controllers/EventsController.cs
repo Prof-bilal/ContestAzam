@@ -189,6 +189,9 @@ public class EventsController : ControllerBase
         if (evt.Status != EventStatus.Approved)
             return BadRequest(ApiResponse.Fail("Registration is not open for this event."));
 
+        if (evt.IsPaid)
+            return BadRequest(ApiResponse.Fail("This is a paid event. Please use the payment endpoint to register."));
+
         // Check registration deadline
         if (evt.RegistrationDeadline.HasValue && DateTime.UtcNow > evt.RegistrationDeadline.Value)
             return BadRequest(ApiResponse.Fail("Registration deadline has passed."));
@@ -209,6 +212,7 @@ public class EventsController : ControllerBase
 
             existingRegistration.Status = RegistrationStatus.Confirmed;
             existingRegistration.RegisteredOn = DateTime.UtcNow;
+            existingRegistration.CheckInToken = Guid.NewGuid().ToString("N");
         }
         else
         {
@@ -217,7 +221,8 @@ public class EventsController : ControllerBase
                 EventId = id,
                 StudentId = userId,
                 Status = RegistrationStatus.Confirmed,
-                RegisteredOn = DateTime.UtcNow
+                RegisteredOn = DateTime.UtcNow,
+                CheckInToken = Guid.NewGuid().ToString("N")
             });
         }
 

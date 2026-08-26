@@ -60,6 +60,9 @@ export function EventAttendees() {
               <p className="muted">{event?.title ?? "Event"} — {attendees.length} registered</p>
             </div>
           </div>
+          <Link to={`/organizer/events/${eventId}/check-in`} className="btn btn-primary btn-small" style={{ width: "auto" }}>
+            QR Check-In
+          </Link>
         </div>
 
         {attendees.length === 0 ? (

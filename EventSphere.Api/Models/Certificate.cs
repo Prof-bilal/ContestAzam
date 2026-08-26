@@ -12,6 +12,8 @@ public class Certificate
 
     public DateTime IssuedOn { get; set; } = DateTime.UtcNow;
 
+    public bool FeePaid { get; set; } = false;
+
     // Navigation
     public Event Event { get; set; } = null!;
 

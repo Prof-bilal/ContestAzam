@@ -32,6 +32,11 @@ public class CreateEventRequest
 
     public DateTime? RegistrationDeadline { get; set; }
 
+    public bool IsPaid { get; set; }
+
+    [Range(0, 99999.99, ErrorMessage = "Price must be between 0 and 99999.99.")]
+    public decimal Price { get; set; }
+
     /// <summary>Set to true to save as Draft. Default is PendingApproval.</summary>
     public bool SaveAsDraft { get; set; }
 }
@@ -63,6 +68,11 @@ public class UpdateEventRequest
     public string? ImageUrl { get; set; }
 
     public DateTime? RegistrationDeadline { get; set; }
+
+    public bool IsPaid { get; set; }
+
+    [Range(0, 99999.99, ErrorMessage = "Price must be between 0 and 99999.99.")]
+    public decimal Price { get; set; }
 }
 
 public class RejectEventRequest
@@ -110,6 +120,8 @@ public class EventSummaryDto
     public string Status { get; set; } = string.Empty;
     public string? ImageUrl { get; set; }
     public DateTime? RegistrationDeadline { get; set; }
+    public bool IsPaid { get; set; }
+    public decimal Price { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public bool IsRegistered { get; set; }

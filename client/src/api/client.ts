@@ -1,4 +1,4 @@
-import type { ApiResponse, AuthData, UserDto, ProfileDto, AdminDashboardStats, AdminOrganizerRequest, EventSummary, EventCategory, EventListResponse, OrganizerEventStats, RegistrationDto, AttendeeDto, ReviewDto, EventReviewSummary, FavoriteDto, NotificationDto, AdminEventDto } from "../types";
+import type { ApiResponse, AuthData, UserDto, ProfileDto, AdminDashboardStats, AdminOrganizerRequest, EventSummary, EventCategory, EventListResponse, OrganizerEventStats, RegistrationDto, AttendeeDto, ReviewDto, EventReviewSummary, FavoriteDto, NotificationDto, AdminEventDto, PaymentStatus, DigitalPass, AttendanceStats } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -472,6 +472,8 @@ export async function createEvent(data: {
   maxParticipants: number;
   imageUrl?: string;
   registrationDeadline?: string;
+  isPaid?: boolean;
+  price?: number;
   saveAsDraft?: boolean;
 }): Promise<EventSummary> {
   const res = await request<EventSummary>("/api/events", { method: "POST", body: data });
@@ -490,6 +492,8 @@ export async function updateEvent(
     maxParticipants: number;
     imageUrl?: string;
     registrationDeadline?: string;
+    isPaid?: boolean;
+    price?: number;
   },
 ): Promise<EventSummary> {
   const res = await request<EventSummary>(`/api/events/${id}`, { method: "PUT", body: data });
@@ -668,4 +672,51 @@ export async function approveEvent(id: number): Promise<void> {
 
 export async function rejectEvent(id: number, reason?: string): Promise<void> {
   await request<unknown>(`/api/admin/events/${id}/reject`, { method: "PATCH", body: { reason: reason || null } });
+}
+
+// ───────────────────────────── Payment ─────────────────────────────
+
+export async function createCheckoutSession(eventId: number): Promise<{ url: string }> {
+  const res = await request<{ url: string }>("/api/payment/create-checkout", {
+    method: "POST",
+    body: { eventId },
+  });
+  return res.data!;
+}
+
+export async function getPaymentStatus(eventId: number): Promise<PaymentStatus | null> {
+  const res = await request<PaymentStatus>(`/api/payment/status/${eventId}`);
+  return res.data!;
+}
+
+export async function getStripePublishableKey(): Promise<string> {
+  const res = await request<{ key: string }>("/api/payment/publishable-key", { auth: false });
+  return res.data!.key;
+}
+
+// ───────────────────────────── Digital Pass ─────────────────────────────
+
+export async function getDigitalPass(registrationId: number): Promise<DigitalPass> {
+  const res = await request<DigitalPass>(`/api/participant/registrations/${registrationId}/pass`);
+  return res.data!;
+}
+
+// ───────────────────────────── Attendance ─────────────────────────────
+
+export async function checkInByToken(token: string): Promise<{ success: boolean; message: string; attendeeName?: string; eventTitle?: string }> {
+  const res = await request<{ success: boolean; message: string; attendeeName?: string; eventTitle?: string }>(
+    "/api/organizer/events/attendance/check-in",
+    { method: "POST", body: { token } },
+  );
+  return res.data!;
+}
+
+export async function getEventAttendance(eventId: number): Promise<AttendeeDto[]> {
+  const res = await request<AttendeeDto[]>(`/api/organizer/events/${eventId}/attendance`);
+  return res.data!;
+}
+
+export async function getAttendanceStats(eventId: number): Promise<AttendanceStats> {
+  const res = await request<AttendanceStats>(`/api/organizer/events/${eventId}/attendance/stats`);
+  return res.data!;
 }

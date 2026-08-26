@@ -105,7 +105,12 @@ export function EventDiscovery() {
                   )}
                 </div>
                 <div className="event-card-body">
-                  <span className="event-card-category">{evt.categoryName}</span>
+                  <div className="event-card-header-row">
+                    <span className="event-card-category">{evt.categoryName}</span>
+                    <span className={`event-price-badge ${evt.isPaid ? "paid" : "free"}`}>
+                      {evt.isPaid ? `$${evt.price.toFixed(2)}` : "Free"}
+                    </span>
+                  </div>
                   <h3 className="event-card-title">{evt.title}</h3>
                   <div className="event-card-meta">
                     <span>{new Date(evt.eventDate).toLocaleDateString()}</span>

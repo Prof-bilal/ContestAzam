@@ -1019,3 +1019,238 @@ a {
     padding: 1rem;
   }
 }
+
+/* ───────────────────────────── Event Price ───────────────────────────── */
+
+.event-price-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.event-price-badge.free {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.event-price-badge.paid {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.event-card-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.event-price-paid {
+  color: #818cf8;
+  font-weight: 600;
+}
+
+.event-price-free {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+/* ───────────────────────────── Digital Pass ───────────────────────────── */
+
+.digital-pass-page {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.digital-pass {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.digital-pass-header {
+  background: linear-gradient(135deg, var(--primary), #818cf8);
+  padding: 1.5rem 1rem;
+  color: #fff;
+}
+
+.digital-pass-header h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+}
+
+.digital-pass-subtitle {
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+.digital-pass-qr {
+  padding: 1.5rem 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.digital-pass-qr img {
+  border-radius: 8px;
+  border: 3px solid #fff;
+}
+
+.digital-pass-details {
+  padding: 1rem;
+  text-align: left;
+}
+
+.digital-pass-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.digital-pass-row:last-child {
+  border-bottom: none;
+}
+
+.digital-pass-label {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.digital-pass-value {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.digital-pass-footer {
+  padding: 0.75rem 1rem;
+  background: rgba(99, 102, 241, 0.08);
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ───────────────────────────── QR Scanner ───────────────────────────── */
+
+.qr-checkin-page {
+  padding: 1rem;
+}
+
+.qr-checkin-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+  .qr-checkin-content {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qr-scanner-container {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.qr-scanner-container h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.qr-manual-entry {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.qr-manual-entry h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.qr-checkin-result {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.qr-checkin-result.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.qr-checkin-result.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.qr-stats-panel {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.qr-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.qr-stat-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ───────────────────────────── Payment Result ───────────────────────────── */
+
+.payment-result-page {
+  padding: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* ───────────────────────────── Print Styles ───────────────────────────── */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .digital-pass {
+    border: 2px solid #000;
+    box-shadow: none;
+  }
+
+  .digital-pass-header {
+    background: #6366f1 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .digital-pass-footer {
+    background: rgba(99, 102, 241, 0.1) !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

@@ -25,6 +25,8 @@ export function EditEvent() {
   const [uploading, setUploading] = useState(false);
   const [registrationDeadline, setRegistrationDeadline] = useState("");
   const [status, setStatus] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [price, setPrice] = useState("");
 
   const eventId = Number(id);
 
@@ -43,6 +45,8 @@ export function EditEvent() {
         setImageUrl(evt.imageUrl ?? "");
         setRegistrationDeadline(evt.registrationDeadline ? evt.registrationDeadline.slice(0, 16) : "");
         setStatus(evt.status);
+        setIsPaid(evt.isPaid);
+        setPrice(evt.isPaid ? evt.price.toString() : "");
       })
       .finally(() => setLoading(false));
   }, [eventId]);
@@ -67,6 +71,8 @@ export function EditEvent() {
         maxParticipants: Number(maxParticipants),
         imageUrl: finalImageUrl,
         registrationDeadline: registrationDeadline || undefined,
+        isPaid,
+        price: isPaid ? Number(price) : 0,
       });
       addToast("success", "Event updated.");
     } catch (e: unknown) {
@@ -159,6 +165,27 @@ export function EditEvent() {
 
         <label>Registration Deadline</label>
         <input type="datetime-local" value={registrationDeadline} onChange={(e) => setRegistrationDeadline(e.target.value)} />
+
+        <label>Event Type</label>
+        <select value={isPaid ? "paid" : "free"} onChange={(e) => setIsPaid(e.target.value === "paid")}>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+
+        {isPaid && (
+          <>
+            <label>Price ($) *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              required={isPaid}
+            />
+          </>
+        )}
 
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
           <button type="submit" className="btn btn-primary" disabled={saving} style={{ width: "auto", marginTop: 0 }}>

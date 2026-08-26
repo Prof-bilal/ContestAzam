@@ -28,6 +28,7 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<int>, int>
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<OrganizerRequest> OrganizerRequests => Set<OrganizerRequest>();
     public DbSet<Favorite> Favorites => Set<Favorite>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -76,6 +76,8 @@ export interface EventSummary {
   status: string;
   imageUrl: string | null;
   registrationDeadline: string | null;
+  isPaid: boolean;
+  price: number;
   createdAt: string;
   updatedAt: string | null;
   isRegistered: boolean;
@@ -174,4 +176,36 @@ export interface AdminEventDto {
   registeredCount: number;
   status: string;
   createdAt: string;
+}
+
+// ───────────────────────────── Payment ─────────────────────────────
+
+export interface PaymentStatus {
+  id: number;
+  amount: number;
+  status: string;
+  paidAt: string | null;
+}
+
+// ───────────────────────────── Digital Pass ─────────────────────────────
+
+export interface DigitalPass {
+  registrationId: number;
+  eventId: number;
+  eventTitle: string;
+  eventDate: string;
+  eventTime: string;
+  venue: string;
+  participantName: string;
+  qrCodeBase64: string;
+  checkInToken: string;
+}
+
+// ───────────────────────────── Attendance ─────────────────────────────
+
+export interface AttendanceStats {
+  totalRegistered: number;
+  totalCheckedIn: number;
+  totalPending: number;
+  checkInPercentage: number;
 }

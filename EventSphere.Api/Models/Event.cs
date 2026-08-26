@@ -30,6 +30,10 @@ public class Event
 
     public DateTime? RegistrationDeadline { get; set; }
 
+    public bool IsPaid { get; set; } = false;
+
+    public decimal Price { get; set; } = 0;
+
     // Navigation
     public EventCategory Category { get; set; } = null!;
 

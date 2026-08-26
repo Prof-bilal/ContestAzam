@@ -17,6 +17,7 @@ public class OrganizerController : ControllerBase
 {
     private readonly IEventService _eventService;
     private readonly IEngagementService _engagement;
+    private readonly IAttendanceService _attendanceService;
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
     private readonly ILogger<OrganizerController> _logger;
@@ -24,12 +25,14 @@ public class OrganizerController : ControllerBase
     public OrganizerController(
         IEventService eventService,
         IEngagementService engagement,
+        IAttendanceService attendanceService,
         AppDbContext db,
         UserManager<AppUser> userManager,
         ILogger<OrganizerController> logger)
     {
         _eventService = eventService;
         _engagement = engagement;
+        _attendanceService = attendanceService;
         _db = db;
         _userManager = userManager;
         _logger = logger;
@@ -239,5 +242,41 @@ public class OrganizerController : ControllerBase
             userId, studentId, eventId);
 
         return Ok(ApiResponse.Ok("Attendee checked in."));
+    }
+
+    // ───────────────────────────── Attendance (QR + Stats) ─────────────────────────────
+
+    /// <summary>Check in an attendee by QR code token.</summary>
+    [HttpPost("events/attendance/check-in")]
+    [Authorize(Roles = $"{AppRoles.Organizer},{AppRoles.Admin}")]
+    public async Task<IActionResult> CheckInByToken([FromBody] CheckInRequest request)
+    {
+        var result = await _attendanceService.CheckInByTokenAsync(request.Token);
+        if (!result.Success)
+            return BadRequest(ApiResponse.Fail(result.Message));
+
+        return Ok(ApiResponse<CheckInResultDto>.Ok(result));
+    }
+
+    /// <summary>Get attendance list for an event.</summary>
+    [HttpGet("events/{eventId:int}/attendance")]
+    public async Task<IActionResult> GetAttendance(int eventId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var attendance = await _attendanceService.GetEventAttendanceAsync(eventId, userId.Value);
+        return Ok(ApiResponse<List<AttendanceDto>>.Ok(attendance));
+    }
+
+    /// <summary>Get attendance statistics for an event.</summary>
+    [HttpGet("events/{eventId:int}/attendance/stats")]
+    public async Task<IActionResult> GetAttendanceStats(int eventId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var stats = await _attendanceService.GetAttendanceStatsAsync(eventId, userId.Value);
+        return Ok(ApiResponse<AttendanceStatsDto>.Ok(stats));
     }
 }

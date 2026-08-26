@@ -21,6 +21,8 @@ export function CreateEvent() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [registrationDeadline, setRegistrationDeadline] = useState("");
+  const [isPaid, setIsPaid] = useState(false);
+  const [price, setPrice] = useState("");
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
@@ -50,6 +52,8 @@ export function CreateEvent() {
         maxParticipants: Number(maxParticipants),
         imageUrl: finalImageUrl,
         registrationDeadline: registrationDeadline || undefined,
+        isPaid,
+        price: isPaid ? Number(price) : 0,
         saveAsDraft,
       });
       addToast("success", saveAsDraft ? "Event saved as draft." : "Event submitted for approval.");
@@ -119,6 +123,27 @@ export function CreateEvent() {
 
         <label>Registration Deadline</label>
         <input type="datetime-local" value={registrationDeadline} onChange={(e) => setRegistrationDeadline(e.target.value)} />
+
+        <label>Event Type</label>
+        <select value={isPaid ? "paid" : "free"} onChange={(e) => setIsPaid(e.target.value === "paid")}>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+
+        {isPaid && (
+          <>
+            <label>Price ($) *</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              required={isPaid}
+            />
+          </>
+        )}
 
         <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: "auto", marginTop: 0 }}>

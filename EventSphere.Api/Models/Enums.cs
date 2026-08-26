@@ -48,3 +48,11 @@ public enum FeedbackRatingCategory
     Technical,
     Hospitality
 }
+
+public enum PaymentStatus
+{
+    Pending,
+    Succeeded,
+    Failed,
+    Refunded
+}
