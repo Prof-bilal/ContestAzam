@@ -14,6 +14,9 @@ public class UserDetails
 
     public string? EnrollmentNo { get; set; }
 
+    /// <summary>Base64-encoded profile image or a URL. Stored for demo purposes.</summary>
+    public string? ProfileImageUrl { get; set; }
+
     // Navigation
     public AppUser User { get; set; } = null!;
 }

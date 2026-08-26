@@ -25,6 +25,7 @@
 | [CODE_STYLE.md](CODE_STYLE.md) | Coding conventions |
 | [DECISIONS.md](DECISIONS.md) | Architecture decision records |
 | [PHASES.md](PHASES.md) | Development phases & team assignments |
+| [EVENT_PHASE.md](EVENT_PHASE.md) | Event Phase roadmap & implementation plan |
 
 ## Skills
 

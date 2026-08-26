@@ -15,6 +15,7 @@ obj/
 
 ## Environment
 appsettings.Production.json
+appsettings.Development.json
 *.env
 .env
 
@@ -28,3 +29,4 @@ packages/
 
 ## User-specific
 launchSettings.json
+EventSphere.Api/wwwroot/uploads/

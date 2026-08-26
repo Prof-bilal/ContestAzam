@@ -25,6 +25,9 @@ public class AppDbContext : IdentityDbContext<AppUser, IdentityRole<int>, int>
     public DbSet<CalendarSync> CalendarSyncs => Set<CalendarSync>();
     public DbSet<EventShareLog> EventShareLogs => Set<EventShareLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<OrganizerRequest> OrganizerRequests => Set<OrganizerRequest>();
+    public DbSet<Favorite> Favorites => Set<Favorite>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

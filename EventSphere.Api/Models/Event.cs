@@ -26,6 +26,10 @@ public class Event
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? ImageUrl { get; set; }
+
+    public DateTime? RegistrationDeadline { get; set; }
+
     // Navigation
     public EventCategory Category { get; set; } = null!;
 

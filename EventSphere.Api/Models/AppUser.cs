@@ -4,7 +4,9 @@ namespace EventSphere.Api.Models;
 
 public class AppUser : IdentityUser<int>
 {
-    public UserRole Role { get; set; } = UserRole.Participant;
+    
+    
+    public UserRole Role { get; set; } = UserRole.Visitor;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
