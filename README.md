@@ -234,6 +234,11 @@ dotnet test
 | Ramsha | Frontend | Module 3 — Frontend Core + Shared UI |
 | Marukh | Frontend | Module 4 — Frontend Features + Dashboards |
 
+## Reports
+
+- [PROGRESS_REPORT.md](PROGRESS_REPORT.md) — Full progress report with module-by-module breakdown, completion percentages, and remaining work
+- [SRS.md](SRS.md) — Software Requirements Specification
+
 ## License
 
 This project is for educational purposes.
