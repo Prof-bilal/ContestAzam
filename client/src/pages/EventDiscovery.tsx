@@ -60,6 +60,9 @@ export function EventDiscovery() {
               + Create Event
             </Link>
           )}
+          <Link to="/calendar" className="btn btn-secondary btn-small">
+            📅 Calendar
+          </Link>
           <Link to="/dashboard" className="btn btn-secondary btn-small">
             Dashboard
           </Link>

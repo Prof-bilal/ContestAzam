@@ -9,12 +9,18 @@ public class AttendanceService : IAttendanceService
 {
     private readonly AppDbContext _db;
     private readonly IQrCodeService _qrCodeService;
+    private readonly INotificationService _notifications;
+    private readonly IEmailNotificationService _emails;
     private readonly ILogger<AttendanceService> _logger;
 
-    public AttendanceService(AppDbContext db, IQrCodeService qrCodeService, ILogger<AttendanceService> logger)
+    public AttendanceService(AppDbContext db, IQrCodeService qrCodeService,
+        INotificationService notifications, IEmailNotificationService emails,
+        ILogger<AttendanceService> logger)
     {
         _db = db;
         _qrCodeService = qrCodeService;
+        _notifications = notifications;
+        _emails = emails;
         _logger = logger;
     }
 
@@ -31,7 +37,8 @@ public class AttendanceService : IAttendanceService
         var participantName = registration.Student.UserDetails?.FullName
             ?? registration.Student.Email ?? "Participant";
 
-        var qrContent = $"{registration.Id}:{registration.EventId}:{registration.CheckInToken}";
+        // Only encode the random token — never expose sequential IDs.
+        var qrContent = registration.CheckInToken;
         var qrCodeBase64 = _qrCodeService.GenerateQrCodeBase64(qrContent);
 
         return new DigitalPassDto
@@ -48,7 +55,7 @@ public class AttendanceService : IAttendanceService
         };
     }
 
-    public async Task<CheckInResultDto> CheckInByTokenAsync(string token)
+    public async Task<CheckInResultDto> CheckInByTokenAsync(string token, int callerUserId, bool isAdmin)
     {
         var registration = await _db.Registrations
             .Include(r => r.Event)
@@ -63,6 +70,62 @@ public class AttendanceService : IAttendanceService
                 Success = false,
                 Message = "Invalid or expired check-in token."
             };
+        }
+
+        // P0-1: Verify the caller owns this event (or is Admin).
+        if (!isAdmin && registration.Event.OrganizerId != callerUserId)
+        {
+            return new CheckInResultDto
+            {
+                Success = false,
+                Message = "You do not have permission to check in attendees for this event."
+            };
+        }
+
+        // P0-2: Event-day validation — allow check-in only within a window around the event.
+        var eventStartUtc = DateTime.SpecifyKind(
+            registration.Event.EventDate.Add(registration.Event.EventTime), DateTimeKind.Utc);
+        var now = DateTime.UtcNow;
+        var windowStart = eventStartUtc.AddHours(-24); // 24 hours before
+        var windowEnd = eventStartUtc.AddHours(6);      // 6 hours after start
+
+        if (now < windowStart || now > windowEnd)
+        {
+            return new CheckInResultDto
+            {
+                Success = false,
+                Message = "Check-in is not available for this event at this time."
+            };
+        }
+
+        // P0-5: For paid events, verify payment is complete.
+        if (registration.Event.IsPaid && registration.PaymentId is null)
+        {
+            // Check if a successful payment exists even if PaymentId link is missing.
+            var hasPayment = await _db.Payments.AnyAsync(p =>
+                p.EventId == registration.EventId &&
+                p.UserId == registration.StudentId &&
+                p.Status == PaymentStatus.Succeeded);
+            if (!hasPayment)
+            {
+                return new CheckInResultDto
+                {
+                    Success = false,
+                    Message = "Payment has not been confirmed for this registration."
+                };
+            }
+        }
+        else if (registration.Event.IsPaid && registration.PaymentId.HasValue)
+        {
+            var payment = await _db.Payments.FindAsync(registration.PaymentId.Value);
+            if (payment is null || payment.Status != PaymentStatus.Succeeded)
+            {
+                return new CheckInResultDto
+                {
+                    Success = false,
+                    Message = "Payment has not been confirmed for this registration."
+                };
+            }
         }
 
         var existingAttendance = await _db.Attendances
@@ -98,6 +161,16 @@ public class AttendanceService : IAttendanceService
         await _db.SaveChangesAsync();
 
         var attendeeName = registration.Student.UserDetails?.FullName ?? registration.Student.Email;
+
+        // Notify the attendee their attendance was confirmed.
+        var student = registration.Student;
+        var studentName = student.UserDetails?.FullName ?? student.UserName ?? "there";
+        await _notifications.SendAsync(registration.StudentId, NotificationType.AttendanceConfirmed,
+            "Attendance Confirmed",
+            $"Your attendance for {registration.Event.Title} was confirmed.",
+            relatedEntityId: registration.EventId, relatedEntityType: "Event",
+            actionUrl: $"/my-registrations/{registration.Id}/pass");
+        await _emails.TrySendAttendanceConfirmedAsync(student.Email ?? string.Empty, studentName, registration.Event.Title);
 
         _logger.LogInformation("Check-in by token for Event {EventId}, Student {StudentId}", registration.EventId, registration.StudentId);
 
@@ -160,6 +233,16 @@ public class AttendanceService : IAttendanceService
         await _db.SaveChangesAsync();
 
         var attendeeName = registration.Student.UserDetails?.FullName ?? registration.Student.Email;
+
+        // Notify the attendee their attendance was confirmed.
+        var student = registration.Student;
+        var studentName = student.UserDetails?.FullName ?? student.UserName ?? "there";
+        await _notifications.SendAsync(registration.StudentId, NotificationType.AttendanceConfirmed,
+            "Attendance Confirmed",
+            $"Your attendance for {evt.Title} was confirmed.",
+            relatedEntityId: evt.Id, relatedEntityType: "Event",
+            actionUrl: $"/my-registrations/{registration.Id}/pass");
+        await _emails.TrySendAttendanceConfirmedAsync(student.Email ?? string.Empty, studentName, evt.Title);
 
         _logger.LogInformation("Manual check-in for Event {EventId}, Student {StudentId}", eventId, studentId);
 

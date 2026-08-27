@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { LogoutButton } from "../components/LogoutButton";
 import { useToast } from "../components/Toast";
 import { getOrganizerStats, getOrganizerEvents, cancelEvent, deleteEvent } from "../api/client";
 import type { OrganizerEventStats, EventSummary } from "../types";
 
 export function OrganizerDashboard() {
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [stats, setStats] = useState<OrganizerEventStats | null>(null);
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -39,17 +42,28 @@ export function OrganizerDashboard() {
     } catch { addToast("error", "Failed to delete event."); }
   };
 
+  const highestRole = ["Admin", "Organizer", "Participant"].find((r) =>
+    user?.roles.includes(r),
+  ) || "Visitor";
+
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>
+            {highestRole}
+          </span>
+        </div>
         <nav className="admin-nav">
           <Link to="/dashboard" className="admin-nav-item">Dashboard</Link>
           <Link to="/organizer/events" className="admin-nav-item active">My Events</Link>
           <Link to="/organizer/categories" className="admin-nav-item">Categories</Link>
-          <Link to="/my-registrations" className="admin-nav-item">My Registrations</Link>
           <Link to="/events" className="admin-nav-item">Browse Events</Link>
+          <Link to="/profile" className="admin-nav-item">Profile</Link>
         </nav>
+        <LogoutButton style={{ marginTop: "auto" }} />
       </aside>
       <main className="admin-main">
         <div className="admin-header">
@@ -101,7 +115,7 @@ export function OrganizerDashboard() {
                 {events.map((evt) => (
                   <tr key={evt.id}>
                     <td>
-                      <Link to={`/events/${evt.id}`} style={{ color: "#818cf8" }}>{evt.title}</Link>
+                      <Link to={`/events/${evt.id}`} style={{ color: "var(--deep-teal)" }}>{evt.title}</Link>
                       <div className="muted">{evt.categoryName}</div>
                     </td>
                     <td>{new Date(evt.eventDate).toLocaleDateString()}</td>
@@ -109,8 +123,8 @@ export function OrganizerDashboard() {
                     <td>{evt.registeredCount}/{evt.maxParticipants}</td>
                     <td>
                       <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
-                        {(evt.status === "Draft" || evt.status === "PendingApproval") && (
-                          <Link to={`/organizer/events/${evt.id}/edit`} className="btn btn-secondary btn-small">Edit</Link>
+                        {(evt.status === "Draft" || evt.status === "PendingApproval" || evt.status === "Rejected") && (
+                          <Link to={`/organizer/events/${evt.id}/edit`} className="btn btn-secondary btn-small">{evt.status === "Rejected" ? "Fix & Resubmit" : "Edit"}</Link>
                         )}
                         {evt.status === "Draft" && (
                           <Link to={`/organizer/events/${evt.id}/attendees`} className="btn btn-secondary btn-small">Attendees</Link>

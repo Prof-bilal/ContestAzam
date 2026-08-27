@@ -22,6 +22,8 @@ public class Event
 
     public EventStatus Status { get; set; } = EventStatus.PendingApproval;
 
+    public string? RejectionReason { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }

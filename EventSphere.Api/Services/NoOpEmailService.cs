@@ -19,6 +19,12 @@ public class NoOpEmailService : IEmailService
         Sent.Add(new EmailRecord(toEmail, "ResetPassword", resetUrl));
         return Task.CompletedTask;
     }
+
+    public Task SendTransactionalAsync(string toEmail, string subject, string htmlContent)
+    {
+        Sent.Add(new EmailRecord(toEmail, "Transactional", htmlContent));
+        return Task.CompletedTask;
+    }
 }
 
 public record EmailRecord(string To, string Template, string Url);

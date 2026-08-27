@@ -37,20 +37,29 @@ export function AdminDashboard() {
     return <div className="center-screen">Loading dashboard...</div>;
   }
 
+  const highestRole = ["Admin", "Organizer", "Participant"].find((r) =>
+    user?.roles.includes(r),
+  ) || "Visitor";
+
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>
+            {highestRole}
+          </span>
+        </div>
         <nav className="admin-nav">
-          <Link to="/admin" className="admin-nav-item active">
-            Dashboard
-          </Link>
-          <Link to="/admin/organizer-requests" className="admin-nav-item">
-            Organizer Requests
-          </Link>
-          <Link to="/dashboard" className="admin-nav-item">
-            Main App
-          </Link>
+          <Link to="/admin" className="admin-nav-item active">Dashboard</Link>
+          <Link to="/admin/users" className="admin-nav-item">Users</Link>
+          <Link to="/admin/events" className="admin-nav-item">Events</Link>
+          <Link to="/admin/organizer-requests" className="admin-nav-item">Organizer Requests</Link>
+          <Link to="/admin/reviews" className="admin-nav-item">Reviews</Link>
+          <Link to="/admin/announcements" className="admin-nav-item">Announcements</Link>
+          <Link to="/admin/reports" className="admin-nav-item">Reports</Link>
+          <Link to="/dashboard" className="admin-nav-item">Main App</Link>
         </nav>
         <button className="btn btn-secondary" onClick={onLogout} style={{ marginTop: "auto" }}>
           Logout
@@ -69,13 +78,13 @@ export function AdminDashboard() {
               <div className="stat-label">Total Users</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number" style={{ color: stats.pendingRequests > 0 ? "var(--primary)" : undefined }}>
+              <div className="stat-number" style={{ color: stats.pendingRequests > 0 ? "var(--butter-yellow)" : undefined }}>
                 {stats.pendingRequests}
               </div>
               <div className="stat-label">Pending Requests</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number" style={{ color: "var(--ok)" }}>
+              <div className="stat-number" style={{ color: "var(--deep-teal)" }}>
                 {stats.approvedOrganizers}
               </div>
               <div className="stat-label">Approved Organizers</div>

@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import { ToastProvider } from "./components/Toast";
+import { RealtimeProvider } from "./realtime/RealtimeContext";
 import "./styles.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -11,7 +12,11 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
-          <App />
+          {/* One SignalR connection for the whole app; connects on login,
+              disconnects on logout. */}
+          <RealtimeProvider>
+            <App />
+          </RealtimeProvider>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

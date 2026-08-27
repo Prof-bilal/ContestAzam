@@ -39,6 +39,8 @@ export function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [department, setDepartment] = useState("");
+  const [enrollmentNo, setEnrollmentNo] = useState("");
   const [accountType, setAccountType] = useState<"Visitor" | "Organizer">("Visitor");
   const [orgName, setOrgName] = useState("");
   const [orgReason, setOrgReason] = useState("");
@@ -84,6 +86,8 @@ export function Register() {
         accountType === "Organizer" ? orgName.trim() : undefined,
         accountType === "Organizer" ? orgReason.trim() : undefined,
         accountType === "Organizer" ? orgExperience.trim() || undefined : undefined,
+        department.trim() || undefined,
+        enrollmentNo.trim() || undefined,
       );
       addToast("success", "Account created. Check your email to verify your account.");
       navigate("/verify-email?email=" + encodeURIComponent(email.trim()));
@@ -134,7 +138,7 @@ export function Register() {
 
         {/* Account type selector */}
         <fieldset style={{ border: "none", padding: 0, margin: "0.5rem 0" }}>
-          <legend style={{ fontSize: "0.9rem", color: "#94a3b8", marginBottom: "0.5rem" }}>
+          <legend style={{ fontSize: "0.9rem", color: "var(--muted)", marginBottom: "0.5rem" }}>
             How do you want to use EventSphere?
           </legend>
           <div style={{ display: "flex", gap: "1rem", marginBottom: "0.5rem" }}>
@@ -145,10 +149,10 @@ export function Register() {
                 alignItems: "flex-start",
                 gap: "0.5rem",
                 padding: "0.75rem",
-                border: accountType === "Visitor" ? "2px solid #6366f1" : "1px solid #334155",
-                borderRadius: "8px",
+                border: "1px solid var(--ink-violet)",
+                borderRadius: "0px",
                 cursor: disabled ? "not-allowed" : "pointer",
-                background: accountType === "Visitor" ? "rgba(99,102,241,0.1)" : "transparent",
+                background: accountType === "Visitor" ? "rgba(250,229,155,0.3)" : "transparent",
                 opacity: disabled ? 0.6 : 1,
               }}
             >
@@ -163,7 +167,7 @@ export function Register() {
               />
               <div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>Visitor</div>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
                   Discover and participate in events.
                 </div>
               </div>
@@ -175,10 +179,10 @@ export function Register() {
                 alignItems: "flex-start",
                 gap: "0.5rem",
                 padding: "0.75rem",
-                border: accountType === "Organizer" ? "2px solid #6366f1" : "1px solid #334155",
-                borderRadius: "8px",
+                border: "1px solid var(--ink-violet)",
+                borderRadius: "0px",
                 cursor: disabled ? "not-allowed" : "pointer",
-                background: accountType === "Organizer" ? "rgba(99,102,241,0.1)" : "transparent",
+                background: accountType === "Organizer" ? "rgba(250,229,155,0.3)" : "transparent",
                 opacity: disabled ? 0.6 : 1,
               }}
             >
@@ -193,7 +197,7 @@ export function Register() {
               />
               <div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>Organizer</div>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
                   Create and manage events.
                   <br />
                   Requires Admin approval.
@@ -217,6 +221,24 @@ export function Register() {
           disabled={disabled}
         />
         {errors.email && <p className="field-error">{errors.email}</p>}
+
+        <label htmlFor="department">Department (optional)</label>
+        <input
+          id="department"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
+          disabled={disabled}
+          placeholder="e.g. Computer Science"
+        />
+
+        <label htmlFor="enrollmentNo">Enrollment Number (optional)</label>
+        <input
+          id="enrollmentNo"
+          value={enrollmentNo}
+          onChange={(e) => setEnrollmentNo(e.target.value)}
+          disabled={disabled}
+          placeholder="e.g. ENR-2024-001"
+        />
 
         <label htmlFor="password">Password</label>
         <input

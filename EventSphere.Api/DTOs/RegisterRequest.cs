@@ -46,4 +46,12 @@ public class RegisterRequest
 
     [StringLength(2000, ErrorMessage = "Experience is too long.")]
     public string? OrganizationExperience { get; set; }
+
+    // --- Participant details (optional) ---
+
+    [StringLength(100, ErrorMessage = "Department is too long.")]
+    public string? Department { get; set; }
+
+    [StringLength(50, ErrorMessage = "Enrollment number is too long.")]
+    public string? EnrollmentNo { get; set; }
 }

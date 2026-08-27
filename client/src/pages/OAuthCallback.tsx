@@ -11,6 +11,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   email_unverified: "Your provider email is not verified. Unable to continue.",
   provider_unavailable: "That sign-in provider is not available.",
   account_disabled: "This account is disabled.",
+  account_suspended: "This account has been suspended by an administrator.",
 };
 
 /// Where the backend redirects after OAuth. On success the refresh cookie is
@@ -31,7 +32,12 @@ export function OAuthCallback() {
     const error = params.get("error");
     if (error) {
       addToast("error", ERROR_MESSAGES[error] ?? "External authentication failed.");
-      navigate("/login", { replace: true });
+      if (error === "account_suspended") {
+        const reason = params.get("reason") || "";
+        navigate(`/suspended${reason ? `?reason=${encodeURIComponent(reason)}` : ""}`, { replace: true });
+      } else {
+        navigate("/login", { replace: true });
+      }
       return;
     }
 

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { LogoutButton } from "../components/LogoutButton";
 import { useToast } from "../components/Toast";
 import {
   getOrganizerCategories,
@@ -10,6 +12,7 @@ import {
 import type { EventCategory } from "../types";
 
 export function OrganizerCategories() {
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [categories, setCategories] = useState<EventCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,12 +92,17 @@ export function OrganizerCategories() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>Organizer</span>
+        </div>
         <nav className="admin-nav">
-          <Link to="/organizer/events" className="admin-nav-item">Dashboard</Link>
-          <Link to="/organizer/events/create" className="admin-nav-item">Create Event</Link>
+          <Link to="/organizer/events" className="admin-nav-item">My Events</Link>
           <Link to="/organizer/categories" className="admin-nav-item active">Categories</Link>
           <Link to="/events" className="admin-nav-item">Browse Events</Link>
+          <Link to="/profile" className="admin-nav-item">Profile</Link>
         </nav>
+        <LogoutButton style={{ marginTop: "auto" }} />
       </aside>
       <main className="admin-main">
         <div className="admin-header">
@@ -186,7 +194,7 @@ export function OrganizerCategories() {
             <p>
               Are you sure you want to delete <strong>{deleteModal.name}</strong>?
               {deleteModal.eventCount > 0 && (
-                <span style={{ color: "var(--error)", display: "block", marginTop: "0.5rem" }}>
+                <span style={{ color: "var(--danger)", display: "block", marginTop: "0.5rem" }}>
                   This category has {deleteModal.eventCount} event(s) and cannot be deleted.
                 </span>
               )}

@@ -56,3 +56,25 @@ public enum PaymentStatus
     Failed,
     Refunded
 }
+
+// Notification delivery is system→user. The backend determines these types;
+// they are never trusted from the client.
+public enum NotificationType
+{
+    RegistrationConfirmed,
+    RegistrationCancelled,
+    PaymentSuccessful,
+    PaymentFailed,
+    EventUpdated,
+    EventCancelled,
+    EventReminder,
+    EventStartingSoon,
+    OrganizerRegistration,
+    AttendanceConfirmed,
+    OrganizerRequestApproved,
+    OrganizerRequestRejected,
+    MessageReceived,
+    CertificateAvailable,
+    FeedbackAvailable,
+    NewEventInCategory
+}

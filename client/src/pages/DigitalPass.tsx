@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getDigitalPass } from "../api/client";
+import { LogoutButton } from "../components/LogoutButton";
 import type { DigitalPass as DigitalPassType } from "../types";
 
 export function DigitalPass() {
@@ -25,8 +26,9 @@ export function DigitalPass() {
 
   return (
     <div className="digital-pass-page">
-      <div className="no-print" style={{ marginBottom: "1rem" }}>
+      <div className="no-print" style={{ marginBottom: "1rem", display: "flex", gap: "0.5rem", justifyContent: "space-between" }}>
         <Link to="/my-registrations" className="btn btn-secondary btn-small">&larr; Back to Registrations</Link>
+        <LogoutButton className="btn btn-secondary btn-small" />
       </div>
 
       <div className="digital-pass">

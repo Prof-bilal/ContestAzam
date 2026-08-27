@@ -15,17 +15,23 @@ public class PaymentService : IPaymentService
     private readonly AppDbContext _db;
     private readonly StripeOptions _stripeOptions;
     private readonly UserManager<AppUser> _userManager;
+    private readonly INotificationService _notifications;
+    private readonly IEmailNotificationService _emails;
     private readonly ILogger<PaymentService> _logger;
 
     public PaymentService(
         AppDbContext db,
         IOptions<StripeOptions> stripeOptions,
         UserManager<AppUser> userManager,
+        INotificationService notifications,
+        IEmailNotificationService emails,
         ILogger<PaymentService> logger)
     {
         _db = db;
         _stripeOptions = stripeOptions.Value;
         _userManager = userManager;
+        _notifications = notifications;
+        _emails = emails;
         _logger = logger;
 
         if (!string.IsNullOrEmpty(_stripeOptions.SecretKey))
@@ -206,6 +212,19 @@ public class PaymentService : IPaymentService
 
             await _db.SaveChangesAsync();
 
+            // In-app + email on successful payment.
+            var user2 = await _userManager.FindByIdAsync(userId.ToString());
+            var evt = await _db.Events.FindAsync(eventId);
+            if (user2 is not null && evt is not null)
+            {
+                var name = user2.UserDetails?.FullName ?? user2.UserName ?? "there";
+                await _notifications.SendAsync(userId, NotificationType.PaymentSuccessful,
+                    "Payment Successful",
+                    $"Your payment for {evt.Title} was completed successfully.",
+                    relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+                await _emails.TrySendPaymentSuccessfulAsync(user2.Email ?? string.Empty, name, evt.Title, payment.Amount);
+            }
+
             _logger.LogInformation("Payment confirmed and registration created for Event {EventId}, User {UserId}", eventId, userId);
             return true;
         }
@@ -221,6 +240,25 @@ public class PaymentService : IPaymentService
                 {
                     payment.Status = PaymentStatus.Failed;
                     await _db.SaveChangesAsync();
+
+                    if (session.Metadata is not null &&
+                        session.Metadata.TryGetValue("eventId", out var evId) &&
+                        session.Metadata.TryGetValue("userId", out var usrId) &&
+                        int.TryParse(usrId, out var uid) &&
+                        int.TryParse(evId, out var eid))
+                    {
+                        var user = await _userManager.FindByIdAsync(uid.ToString());
+                        var evt = await _db.Events.FindAsync(eid);
+                        if (user is not null && evt is not null)
+                        {
+                            var name = user.UserDetails?.FullName ?? user.UserName ?? "there";
+                            await _notifications.SendAsync(user.Id, NotificationType.PaymentFailed,
+                                "Payment Failed",
+                                $"Your payment for {evt.Title} could not be completed.",
+                                relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+                            await _emails.TrySendPaymentFailedAsync(user.Email ?? string.Empty, name, evt.Title);
+                        }
+                    }
                 }
             }
         }

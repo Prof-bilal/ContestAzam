@@ -54,6 +54,10 @@ public class RateLimitOptions
     public int EmailPermitLimit { get; set; } = 5;
     public int EmailWindowSeconds { get; set; } = 60;
 
+    /// <summary>Limit for user→user message sends / conversation creation (spam control).</summary>
+    public int MessagingPermitLimit { get; set; } = 60;
+    public int MessagingWindowSeconds { get; set; } = 60;
+
     /// <summary>General limit applied to all other API traffic.</summary>
     public int GeneralPermitLimit { get; set; } = 100;
     public int GeneralWindowSeconds { get; set; } = 60;

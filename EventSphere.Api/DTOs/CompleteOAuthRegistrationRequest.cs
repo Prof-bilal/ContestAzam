@@ -29,4 +29,8 @@ public class CompleteOAuthRegistrationRequest
 
     [StringLength(2000, ErrorMessage = "Experience is too long.")]
     public string? OrganizationExperience { get; set; }
+
+    /// <summary>Optional profile image URL (uploaded separately via /api/profile/image).</summary>
+    [StringLength(500, ErrorMessage = "Profile image URL is too long.")]
+    public string? ProfileImageUrl { get; set; }
 }

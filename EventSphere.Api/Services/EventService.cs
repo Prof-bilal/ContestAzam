@@ -8,10 +8,14 @@ namespace EventSphere.Api.Services;
 public class EventService : IEventService
 {
     private readonly AppDbContext _db;
+    private readonly INotificationService _notifications;
+    private readonly IEmailNotificationService _emails;
 
-    public EventService(AppDbContext db)
+    public EventService(AppDbContext db, INotificationService notifications, IEmailNotificationService emails)
     {
         _db = db;
+        _notifications = notifications;
+        _emails = emails;
     }
 
     // ───────────────────────────── Public ─────────────────────────────
@@ -90,6 +94,17 @@ public class EventService : IEventService
         _db.Events.Add(evt);
         await _db.SaveChangesAsync();
 
+        // Notify users who favorited events in the same category (async, best-effort).
+        try
+        {
+            await NotifyFavoritedUsersAsync(evt);
+        }
+        catch
+        {
+            // Notification failure must not break event creation.
+            // Swallow — logged by inner services.
+        }
+
         // Reload with navigation properties
         return (await GetByIdAsync(evt.Id, organizerId))!;
     }
@@ -100,8 +115,15 @@ public class EventService : IEventService
         if (evt is null) return null;
 
         if (!isAdmin && evt.OrganizerId != organizerId) return null;
-        if (!isAdmin && evt.Status != EventStatus.Draft && evt.Status != EventStatus.PendingApproval)
+        if (!isAdmin && evt.Status != EventStatus.Draft && evt.Status != EventStatus.PendingApproval && evt.Status != EventStatus.Rejected)
             return null;
+
+        // When a rejected event is updated, resubmit it for approval.
+        if (!isAdmin && evt.Status == EventStatus.Rejected)
+        {
+            evt.Status = EventStatus.PendingApproval;
+            evt.RejectionReason = null;
+        }
 
         evt.Title = request.Title.Trim();
         evt.Description = request.Description?.Trim();
@@ -117,6 +139,24 @@ public class EventService : IEventService
         evt.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
+
+        // Notify registered attendees of an update only if the event is live (approved).
+        if (evt.Status == EventStatus.Approved)
+        {
+            var attendees = await _db.Registrations
+                .Include(r => r.Student)
+                .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.Confirmed)
+                .ToListAsync();
+
+            foreach (var reg in attendees)
+            {
+                await _notifications.SendAsync(reg.StudentId, NotificationType.EventUpdated,
+                    "Event Updated",
+                    $"The event \"{evt.Title}\" has been updated.",
+                    relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+            }
+        }
+
         return (await GetByIdAsync(eventId, organizerId))!;
     }
 
@@ -165,6 +205,23 @@ public class EventService : IEventService
         evt.Status = EventStatus.Cancelled;
         evt.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Notify all confirmed registrants of the cancellation (in-app + email).
+        var attendees = await _db.Registrations
+            .Include(r => r.Student).ThenInclude(u => u.UserDetails)
+            .Where(r => r.EventId == eventId && r.Status == RegistrationStatus.Confirmed)
+            .ToListAsync();
+
+        foreach (var reg in attendees)
+        {
+            await _notifications.SendAsync(reg.StudentId, NotificationType.EventCancelled,
+                "Event Cancelled",
+                $"The event \"{evt.Title}\" you registered for has been cancelled.",
+                relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+            var name = reg.Student.UserDetails?.FullName ?? reg.Student.UserName ?? "there";
+            await _emails.TrySendEventCancelledAsync(reg.Student.Email ?? string.Empty, name, evt.Title);
+        }
+
         return true;
     }
 
@@ -283,6 +340,7 @@ public class EventService : IEventService
             MaxParticipants = e.MaxParticipants,
             RegisteredCount = e.Registrations.Count(r => r.Status == RegistrationStatus.Confirmed),
             Status = e.Status.ToString(),
+            RejectionReason = e.RejectionReason,
             CreatedAt = e.CreatedAt
         }).ToList();
 
@@ -297,6 +355,30 @@ public class EventService : IEventService
         evt.Status = EventStatus.Approved;
         evt.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Notify the organizer that their event was approved.
+        try
+        {
+            var organizer = await _db.Users
+                .Include(u => u.UserDetails)
+                .FirstOrDefaultAsync(u => u.Id == evt.OrganizerId);
+            if (organizer is not null)
+            {
+                var orgName = organizer.UserDetails?.FullName ?? organizer.UserName ?? "there";
+                await _notifications.SendAsync(
+                    organizer.Id,
+                    NotificationType.EventUpdated,
+                    "Event Approved",
+                    $"Your event \"{evt.Title}\" has been approved and is now live.",
+                    relatedEntityId: evt.Id,
+                    relatedEntityType: "Event",
+                    actionUrl: $"/events/{evt.Id}");
+                // Email (best-effort).
+                await _emails.TrySendEventApprovedAsync(organizer.Email ?? string.Empty, orgName, evt.Title);
+            }
+        }
+        catch { /* notification failure must not block approval */ }
+
         return true;
     }
 
@@ -306,8 +388,35 @@ public class EventService : IEventService
         if (evt is null || evt.Status != EventStatus.PendingApproval) return false;
 
         evt.Status = EventStatus.Rejected;
+        evt.RejectionReason = reason?.Trim();
         evt.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Notify the organizer that their event was rejected.
+        try
+        {
+            var organizer = await _db.Users
+                .Include(u => u.UserDetails)
+                .FirstOrDefaultAsync(u => u.Id == evt.OrganizerId);
+            if (organizer is not null)
+            {
+                var orgName = organizer.UserDetails?.FullName ?? organizer.UserName ?? "there";
+                var reasonText = string.IsNullOrWhiteSpace(reason)
+                    ? "No reason was provided."
+                    : $"Reason: {reason}";
+                await _notifications.SendAsync(
+                    organizer.Id,
+                    NotificationType.EventUpdated,
+                    "Event Rejected",
+                    $"Your event \"{evt.Title}\" was not approved. {reasonText}",
+                    relatedEntityId: evt.Id,
+                    relatedEntityType: "Event",
+                    actionUrl: $"/organizer/events");
+                await _emails.TrySendEventRejectedAsync(organizer.Email ?? string.Empty, orgName, evt.Title, reason);
+            }
+        }
+        catch { /* notification failure must not block rejection */ }
+
         return true;
     }
 
@@ -443,6 +552,7 @@ public class EventService : IEventService
             MaxParticipants = e.MaxParticipants,
             RegisteredCount = e.Registrations?.Count(r => r.Status == RegistrationStatus.Confirmed) ?? 0,
             Status = e.Status.ToString(),
+            RejectionReason = e.RejectionReason,
             ImageUrl = e.ImageUrl,
             RegistrationDeadline = e.RegistrationDeadline,
             IsPaid = e.IsPaid,
@@ -452,5 +562,60 @@ public class EventService : IEventService
             IsRegistered = currentUserId.HasValue && e.Registrations != null &&
                            e.Registrations.Any(r => r.StudentId == currentUserId.Value && r.Status == RegistrationStatus.Confirmed)
         };
+    }
+
+    /// <summary>
+    /// When a new event is created, notify all users who have favorited events
+    /// in the same category. Excludes the event organizer (they already know).
+    /// Fire-and-forget: failures are swallowed because notification must never
+    /// block event creation.
+    /// </summary>
+    private async Task NotifyFavoritedUsersAsync(Event newEvent)
+    {
+        // Find distinct user IDs who have favorited any event in this category.
+        var favoritedUserIds = await _db.Favorites
+            .Where(f => f.Event.CategoryId == newEvent.CategoryId && f.UserId != newEvent.OrganizerId)
+            .Select(f => f.UserId)
+            .Distinct()
+            .ToListAsync();
+
+        if (favoritedUserIds.Count == 0) return;
+
+        // Load category name and user details in bulk.
+        var categoryName = await _db.EventCategories
+            .Where(c => c.Id == newEvent.CategoryId)
+            .Select(c => c.Name)
+            .FirstOrDefaultAsync() ?? "Events";
+
+        var users = await _db.Users
+            .Include(u => u.UserDetails)
+            .Where(u => favoritedUserIds.Contains(u.Id) && u.IsActive)
+            .ToListAsync();
+
+        var eventUrl = $"/events/{newEvent.Id}";
+
+        foreach (var user in users)
+        {
+            var userName = user.UserDetails?.FullName ?? user.UserName ?? "there";
+
+            // In-app notification (SignalR push + DB persist).
+            await _notifications.SendAsync(
+                user.Id,
+                NotificationType.NewEventInCategory,
+                "New event in your interest",
+                $"A new event \"{newEvent.Title}\" was just created in {categoryName}.",
+                relatedEntityId: newEvent.Id,
+                relatedEntityType: "Event",
+                actionUrl: eventUrl);
+
+            // Email notification (best-effort, never blocks).
+            await _emails.TrySendNewEventInCategoryAsync(
+                user.Email ?? string.Empty,
+                userName,
+                newEvent.Title,
+                categoryName,
+                newEvent.EventDate,
+                eventUrl);
+        }
     }
 }

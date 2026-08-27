@@ -36,9 +36,23 @@ public class UpdateProfileRequest
     [StringLength(100, ErrorMessage = "Department is too long.")]
     public string? Department { get; set; }
 
+    [StringLength(50, ErrorMessage = "Enrollment number is too long.")]
+    public string? EnrollmentNo { get; set; }
+
     /// <summary>Base64-encoded image data (data:image/...;base64,...) or a URL.</summary>
     [StringLength(5_000_000, ErrorMessage = "Profile image is too large.")]
     public string? ProfileImageUrl { get; set; }
+}
+
+/// <summary>Change password payload.</summary>
+public class ChangePasswordRequest
+{
+    [Required(ErrorMessage = "Current password is required.")]
+    public string CurrentPassword { get; set; } = string.Empty;
+
+    [Required(ErrorMessage = "New password is required.")]
+    [StringLength(100, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 /// <summary>Delete account confirmation payload.</summary>

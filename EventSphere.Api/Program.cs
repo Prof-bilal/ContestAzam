@@ -6,6 +6,7 @@ using EventSphere.Api.Auth;
 using EventSphere.Api.Common;
 using EventSphere.Api.Common.Options;
 using EventSphere.Api.Data;
+using EventSphere.Api.Hubs;
 using EventSphere.Api.Middleware;
 using EventSphere.Api.Models;
 using EventSphere.Api.Services;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -114,6 +116,21 @@ var authBuilder = builder.Services.AddAuthentication(options =>
         NameClaimType = "name",
         RoleClaimType = "role"
     };
+
+    // SignalR transports cannot set a Bearer header, so read the token from the
+    // "access_token" query string for hub paths. Never trust it for HTTP.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            if (context.HttpContext.Request.Path.StartsWithSegments("/hubs")
+                && context.Request.Query.TryGetValue("access_token", out var token))
+            {
+                context.Token = token;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 authBuilder.AddExternalOAuth(config);
@@ -128,6 +145,22 @@ builder.Services.AddScoped<IEngagementService, EngagementService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddSingleton<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
+
+// ---------- Notifications, email notifications & messaging ----------
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+builder.Services.AddScoped<IMessagingService, MessagingService>();
+
+// ---------- SignalR (real-time notifications + messaging) ----------
+builder.Services.AddSignalR();
+// Route SignalR users by their JWT "sub" claim (server-decided).
+builder.Services.AddSingleton<IUserIdProvider, SubUserIdProvider>();
+
+// Lightweight background event reminders.
+if (!env.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<EventReminderService>();
+}
 
 // ---------- Email service ----------
 if (env.IsEnvironment("Testing"))
@@ -186,6 +219,21 @@ builder.Services.AddRateLimiter(options =>
             {
                 PermitLimit = rl.EmailPermitLimit,
                 Window = TimeSpan.FromSeconds(rl.EmailWindowSeconds),
+                QueueLimit = 0
+            });
+    });
+
+    // Per-user messaging spam protection (sends + conversation creation).
+    options.AddPolicy("messaging", httpContext =>
+    {
+        var rl = httpContext.RequestServices.GetRequiredService<IOptions<RateLimitOptions>>().Value;
+        var userKey = httpContext.User.FindFirst("sub")?.Value ?? ClientKey(httpContext);
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: userKey,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = rl.MessagingPermitLimit,
+                Window = TimeSpan.FromSeconds(rl.MessagingWindowSeconds),
                 QueueLimit = 0
             });
     });
@@ -294,6 +342,8 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationsHub>("/hubs/notifications");
+app.MapHub<MessagingHub>("/hubs/messaging");
 
 // ---------- Startup: migrate + seed (skipped under integration tests) ----------
 if (!env.IsEnvironment("Testing"))

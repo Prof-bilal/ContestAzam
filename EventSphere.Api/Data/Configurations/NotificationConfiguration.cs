@@ -19,7 +19,22 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(n => n.Message)
             .HasMaxLength(500);
 
+        // Type persisted as a string (consistent with existing enum conventions).
+        builder.Property(n => n.Type)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.Property(n => n.RelatedEntityType)
+            .HasMaxLength(50);
+
+        builder.Property(n => n.ActionUrl)
+            .HasMaxLength(500);
+
         builder.Property(n => n.IsRead)
+            .HasDefaultValue(false);
+
+        builder.Property(n => n.EmailSent)
             .HasDefaultValue(false);
 
         builder.Property(n => n.CreatedAt)
@@ -30,6 +45,8 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
             .HasForeignKey(n => n.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Cover the common read patterns without over-indexing.
         builder.HasIndex(n => new { n.UserId, n.IsRead });
+        builder.HasIndex(n => new { n.UserId, n.CreatedAt });
     }
 }

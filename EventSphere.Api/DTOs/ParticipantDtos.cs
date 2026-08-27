@@ -77,8 +77,13 @@ public class NotificationDto
     public int Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Message { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public int? RelatedEntityId { get; set; }
+    public string? RelatedEntityType { get; set; }
+    public string? ActionUrl { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? ReadAt { get; set; }
 }
 
 // ───────────────────────────── Payment DTOs ─────────────────────────────
@@ -150,4 +155,65 @@ public class AttendanceStatsDto
     public int TotalCheckedIn { get; set; }
     public int TotalPending { get; set; }
     public double CheckInPercentage { get; set; }
+}
+
+// ───────────────────────────── Media DTOs ─────────────────────────────
+
+public class MediaDto
+{
+    public int Id { get; set; }
+    public int EventId { get; set; }
+    public string FileType { get; set; } = string.Empty;
+    public string FileUrl { get; set; } = string.Empty;
+    public string? Caption { get; set; }
+    public DateTime UploadedOn { get; set; }
+}
+
+// ───────────────────────────── Certificate DTOs ─────────────────────────────
+
+public class UploadCertificateRequest
+{
+    [Required]
+    public int StudentId { get; set; }
+
+    [Required]
+    [StringLength(500)]
+    public string CertificateUrl { get; set; } = string.Empty;
+
+    public bool FeePaid { get; set; }
+}
+
+public class CertificateDto
+{
+    public int Id { get; set; }
+    public int EventId { get; set; }
+    public string EventTitle { get; set; } = string.Empty;
+    public string CertificateUrl { get; set; } = string.Empty;
+    public DateTime IssuedOn { get; set; }
+    public bool FeePaid { get; set; }
+}
+
+// ───────────────────────────── Waitlist DTOs ─────────────────────────────
+
+public class WaitlistEntryDto
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public int EventId { get; set; }
+    public DateTime WaitlistTime { get; set; }
+    public string Status { get; set; } = string.Empty;
+}
+
+// ───────────────────────────── Calendar DTO ─────────────────────────────
+
+public class CalendarEventDto
+{
+    public int EventId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime EventDate { get; set; }
+    public TimeSpan EventTime { get; set; }
+    public string? Venue { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
 }

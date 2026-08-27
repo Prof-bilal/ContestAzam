@@ -12,6 +12,9 @@ public class AppUser : IdentityUser<int>
 
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Reason provided by admin when suspending the account. Null when active.</summary>
+    public string? SuspendReason { get; set; }
+
     // Navigation properties
     public UserDetails? UserDetails { get; set; }
 
@@ -34,4 +37,8 @@ public class AppUser : IdentityUser<int>
     public ICollection<EventShareLog> ShareLogs { get; set; } = new List<EventShareLog>();
 
     public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
+
+    public ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();
+
+    public ICollection<Message> SentMessages { get; set; } = new List<Message>();
 }

@@ -148,7 +148,6 @@ public class EngagementService : IEngagementService
         await _db.SaveChangesAsync();
         return true;
     }
-
     public async Task<EventReviewSummaryDto> GetEventReviewsAsync(int eventId, int? currentUserId)
     {
         var reviews = await _db.Feedbacks
@@ -176,65 +175,81 @@ public class EngagementService : IEngagementService
         };
     }
 
-    // ───────────────────────────── Notifications ─────────────────────────────
+    // ───────────────────────────── Certificates ─────────────────────────────
 
-    public async Task<List<NotificationDto>> GetMyNotificationsAsync(int userId)
+    public async Task<List<CertificateDto>> GetMyCertificatesAsync(int userId)
     {
-        return await _db.Notifications
-            .Where(n => n.UserId == userId)
-            .OrderByDescending(n => n.CreatedAt)
-            .Take(50)
-            .Select(n => new NotificationDto
+        return await _db.Certificates
+            .Include(c => c.Event)
+            .Where(c => c.StudentId == userId)
+            .OrderByDescending(c => c.IssuedOn)
+            .Select(c => new CertificateDto
             {
-                Id = n.Id,
-                Title = n.Title,
-                Message = n.Message,
-                IsRead = n.IsRead,
-                CreatedAt = n.CreatedAt
+                Id = c.Id,
+                EventId = c.EventId,
+                EventTitle = c.Event.Title,
+                CertificateUrl = c.CertificateUrl,
+                IssuedOn = c.IssuedOn,
+                FeePaid = c.FeePaid
             })
             .ToListAsync();
     }
 
-    public async Task<bool> MarkNotificationReadAsync(int notificationId, int userId)
-    {
-        var notification = await _db.Notifications.FindAsync(notificationId);
-        if (notification is null || notification.UserId != userId) return false;
+    // ───────────────────────────── Waitlist ─────────────────────────────
 
-        notification.IsRead = true;
+    public async Task<bool> JoinWaitlistAsync(int userId, int eventId)
+    {
+        var evt = await _db.Events.FindAsync(eventId);
+        if (evt is null || evt.Status != EventStatus.Approved) return false;
+
+        // Check event is full.
+        var confirmedCount = await _db.Registrations
+            .CountAsync(r => r.EventId == eventId && r.Status == RegistrationStatus.Confirmed);
+        if (confirmedCount < evt.MaxParticipants) return false; // Not full — use regular registration.
+
+        // Check not already on waitlist.
+        var existing = await _db.EventWaitlists
+            .FirstOrDefaultAsync(w => w.UserId == userId && w.EventId == eventId);
+        if (existing is not null) return false;
+
+        _db.EventWaitlists.Add(new EventWaitlist
+        {
+            UserId = userId,
+            EventId = eventId,
+            Status = WaitlistStatus.Waiting
+        });
         await _db.SaveChangesAsync();
         return true;
     }
 
-    public async Task<int> MarkAllNotificationsReadAsync(int userId)
+    public async Task<bool> LeaveWaitlistAsync(int userId, int eventId)
     {
-        var unread = await _db.Notifications
-            .Where(n => n.UserId == userId && !n.IsRead)
-            .ToListAsync();
+        var entry = await _db.EventWaitlists
+            .FirstOrDefaultAsync(w => w.UserId == userId && w.EventId == eventId && w.Status == WaitlistStatus.Waiting);
+        if (entry is null) return false;
 
-        foreach (var n in unread)
-            n.IsRead = true;
-
+        entry.Status = WaitlistStatus.Cancelled;
         await _db.SaveChangesAsync();
-        return unread.Count;
+        return true;
     }
 
-    public async Task<int> GetUnreadCountAsync(int userId)
-    {
-        return await _db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
-    }
+    // ───────────────────────────── Calendar ─────────────────────────────
 
-    // ───────────────────────────── Notification Helpers ─────────────────────────────
-
-    public async Task SendNotificationAsync(int userId, string title, string? message)
+    public async Task<CalendarEventDto?> GetEventForCalendarAsync(int eventId)
     {
-        _db.Notifications.Add(new Notification
-        {
-            UserId = userId,
-            Title = title,
-            Message = message,
-            IsRead = false,
-            CreatedAt = DateTime.UtcNow
-        });
-        await _db.SaveChangesAsync();
+        return await _db.Events
+            .Include(e => e.Category)
+            .Where(e => e.Id == eventId && e.Status == EventStatus.Approved)
+            .Select(e => new CalendarEventDto
+            {
+                EventId = e.Id,
+                Title = e.Title,
+                Description = e.Description,
+                EventDate = e.EventDate,
+                EventTime = e.EventTime,
+                Venue = e.Venue,
+                CategoryName = e.Category.Name
+            })
+            .FirstOrDefaultAsync();
     }
 }

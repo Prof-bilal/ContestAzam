@@ -4,9 +4,10 @@ import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/Toast";
 import {
   getEvent, getEventReviews, registerForEvent,
-  submitReview, createCheckoutSession,
+  cancelRegistration, submitReview, createCheckoutSession,
+  getCalendarIcsUrl, joinWaitlist, addFavorite, removeFavorite, getEventMedia,
 } from "../api/client";
-import type { EventSummary, EventReviewSummary } from "../types";
+import type { EventSummary, EventReviewSummary, MediaItem } from "../types";
 
 export function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,10 @@ export function EventDetails() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const eventId = Number(id);
 
@@ -38,8 +43,9 @@ export function EventDetails() {
     Promise.all([
       fetchEvent().catch(() => null),
       getEventReviews(eventId).catch(() => null),
+      getEventMedia(eventId).catch(() => []),
     ])
-      .then(([, rev]) => { setReviews(rev); })
+      .then(([, rev, med]) => { setReviews(rev); setMedia(med); })
       .finally(() => setLoading(false));
   }, [eventId]);
 
@@ -62,6 +68,22 @@ export function EventDetails() {
       addToast("error", msg);
     } finally {
       setRegistering(false);
+    }
+  };
+
+  const handleCancelRegistration = async () => {
+    setCancelling(true);
+    try {
+      await cancelRegistration(eventId);
+      addToast("success", "Registration cancelled.");
+      setShowCancelModal(false);
+      const updated = await fetchEvent();
+      setEvent(updated);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to cancel registration.";
+      addToast("error", msg);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -95,6 +117,9 @@ export function EventDetails() {
   const isFull = spotsLeft <= 0;
   const isRegistered = event.isRegistered;
   const canRegister = user && !isOrganizer && !isRegistered && event.status === "Approved" && !isPast && !isFull && !isDeadlinePassed;
+
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "";
+  const shareText = `Check out this event: ${event.title}`;
 
   return (
     <div className="event-details-page">
@@ -133,7 +158,9 @@ export function EventDetails() {
           )}
           <div className="event-info-item">
             <span className="event-info-label">Slots</span>
-            <span>{event.registeredCount}/{event.maxParticipants} ({spotsLeft} left)</span>
+            <span>{event.registeredCount}/{event.maxParticipants} ({spotsLeft} left)
+              {isFull && <span style={{ color: "var(--danger, #ef4444)", marginLeft: "0.5rem" }}>FULL</span>}
+            </span>
           </div>
           {event.registrationDeadline && (
             <div className="event-info-item">
@@ -149,6 +176,13 @@ export function EventDetails() {
           </div>
         </div>
 
+        {event.status === "Rejected" && event.rejectionReason && (
+          <div className="event-detail-description" style={{ borderLeft: "3px solid var(--danger, #ef4444)", paddingLeft: "1rem" }}>
+            <h3 style={{ color: "var(--danger, #ef4444)" }}>Rejection Reason</h3>
+            <p>{event.rejectionReason}</p>
+          </div>
+        )}
+
         {event.description && (
           <div className="event-detail-description">
             <h3>About this event</h3>
@@ -157,14 +191,32 @@ export function EventDetails() {
         )}
 
         <div className="event-detail-actions">
-          {isOrganizer && (
+          {isOrganizer && (event.status === "Draft" || event.status === "PendingApproval" || event.status === "Rejected") && (
             <Link to={`/organizer/events/${eventId}/edit`} className="btn btn-secondary btn-small">
-              Edit Event
+              {event.status === "Rejected" ? "Fix & Resubmit" : "Edit Event"}
             </Link>
           )}
 
           {isRegistered && !isOrganizer && (
-            <span className="role-badge" style={{ background: "var(--ok)", color: "#fff" }}>Registered</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: "0.4rem",
+                background: "var(--success, #16a34a)", color: "#fff",
+                padding: "0.5rem 1rem", borderRadius: "0.5rem",
+                fontWeight: 600, fontSize: "0.95rem",
+              }}>
+                ✓ You're registered
+              </span>
+              {!isPast && (
+                <button
+                  className="btn btn-secondary btn-small"
+                  style={{ width: "auto", marginTop: 0, color: "var(--danger, #ef4444)", borderColor: "var(--danger, #ef4444)" }}
+                  onClick={() => setShowCancelModal(true)}
+                >
+                  Cancel Registration
+                </button>
+              )}
+            </div>
           )}
 
           {!user && event.status === "Approved" && (
@@ -196,8 +248,70 @@ export function EventDetails() {
               My Registrations
             </Link>
           )}
+
+          {/* Waitlist */}
+          {user && !isOrganizer && !isRegistered && isFull && event.status === "Approved" && !isPast && (
+            <button className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0 }}
+              onClick={async () => {
+                try { await joinWaitlist(eventId); setIsFavorited(true); addToast("success", "Added to waitlist."); }
+                catch { addToast("error", "Could not join waitlist."); }
+              }}>
+              Join Waitlist
+            </button>
+          )}
+
+          {/* Favorite */}
+          {user && !isOrganizer && (
+            <button className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0 }}
+              onClick={async () => {
+                try {
+                  if (isFavorited) { await removeFavorite(eventId); setIsFavorited(false); addToast("success", "Removed from favorites."); }
+                  else { await addFavorite(eventId); setIsFavorited(true); addToast("success", "Added to favorites."); }
+                } catch { addToast("error", "Failed."); }
+              }}>
+              {isFavorited ? "★ Favorited" : "☆ Favorite"}
+            </button>
+          )}
+
+          {/* Calendar */}
+          <a href={getCalendarIcsUrl(eventId)} className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0 }} download>
+            📅 Add to Calendar
+          </a>
+
+          {/* Share */}
+          <div style={{ display: "flex", gap: "0.25rem", flexWrap: "wrap" }}>
+            <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noreferrer"
+              className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0, fontSize: "0.75rem" }}>Facebook</a>
+            <a href={`https://wa.me/?text=${encodeURIComponent(shareText + " " + shareUrl)}`} target="_blank" rel="noreferrer"
+              className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0, fontSize: "0.75rem" }}>WhatsApp</a>
+            <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noreferrer"
+              className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0, fontSize: "0.75rem" }}>Twitter</a>
+            <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`} target="_blank" rel="noreferrer"
+              className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0, fontSize: "0.75rem" }}>LinkedIn</a>
+            <a href={`mailto:?subject=${encodeURIComponent(event.title)}&body=${encodeURIComponent(shareText + " " + shareUrl)}`}
+              className="btn btn-secondary btn-small" style={{ width: "auto", marginTop: 0, fontSize: "0.75rem" }}>Email</a>
+          </div>
         </div>
       </div>
+
+      {/* Media Gallery */}
+      {media.length > 0 && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <h2>Gallery</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+            {media.map((m) => (
+              <div key={m.id} className="card" style={{ padding: 0, overflow: "hidden" }}>
+                {m.fileType === "Image" ? (
+                  <img src={m.fileUrl} alt={m.caption ?? ""} style={{ width: "100%", height: 160, objectFit: "cover" }} />
+                ) : (
+                  <video src={m.fileUrl} style={{ width: "100%", height: 160 }} controls />
+                )}
+                {m.caption && <p style={{ padding: "0.5rem", margin: 0, fontSize: "0.8rem" }}>{m.caption}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Reviews Section */}
       <div className="event-reviews-section">
@@ -288,6 +402,30 @@ export function EventDetails() {
               </button>
               <button className="btn btn-secondary btn-small" onClick={() => setShowRegModal(false)}>
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Registration Confirmation Modal */}
+      {showCancelModal && (
+        <div className="modal-overlay" onClick={() => setShowCancelModal(false)}>
+          <div className="modal card" onClick={(e) => e.stopPropagation()}>
+            <h3>Cancel Registration</h3>
+            <p>Are you sure you want to cancel your registration for <strong>{event.title}</strong>?</p>
+            <div style={{ fontSize: "0.9rem", color: "var(--muted)", marginBottom: "1rem" }}>
+              <div>Date: {new Date(event.eventDate).toLocaleDateString()}</div>
+              <div>Time: {event.eventTime}</div>
+              {event.venue && <div>Venue: {event.venue}</div>}
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button className="btn btn-small" onClick={handleCancelRegistration} disabled={cancelling}
+                style={{ width: "auto", marginTop: 0, background: "var(--danger, #ef4444)", color: "#fff" }}>
+                {cancelling ? "Cancelling..." : "Yes, Cancel Registration"}
+              </button>
+              <button className="btn btn-secondary btn-small" onClick={() => setShowCancelModal(false)}>
+                Keep Registration
               </button>
             </div>
           </div>

@@ -74,6 +74,7 @@ export interface EventSummary {
   maxParticipants: number;
   registeredCount: number;
   status: string;
+  rejectionReason: string | null;
   imageUrl: string | null;
   registrationDeadline: string | null;
   isPaid: boolean;
@@ -160,8 +161,43 @@ export interface NotificationDto {
   id: number;
   title: string;
   message: string | null;
+  type: string;
+  relatedEntityId: number | null;
+  relatedEntityType: string | null;
+  actionUrl: string | null;
   isRead: boolean;
   createdAt: string;
+  readAt: string | null;
+}
+
+// ───────────────────────────── Messaging ─────────────────────────────
+
+export interface MessageDto {
+  id: number;
+  conversationId: number;
+  senderId: number;
+  content: string;
+  sentAt: string;
+  isRead: boolean;
+  readAt: string | null;
+}
+
+export interface ConversationDto {
+  id: number;
+  otherUserId: number | null;
+  otherUserName: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessage: string | null;
+  lastMessageAt: string | null;
+  unreadCount: number;
+}
+
+export interface ConversationDetailDto {
+  id: number;
+  otherUserId: number | null;
+  otherUserName: string;
+  messages: MessageDto[];
 }
 
 export interface AdminEventDto {
@@ -175,6 +211,7 @@ export interface AdminEventDto {
   maxParticipants: number;
   registeredCount: number;
   status: string;
+  rejectionReason: string | null;
   createdAt: string;
 }
 
@@ -208,4 +245,83 @@ export interface AttendanceStats {
   totalCheckedIn: number;
   totalPending: number;
   checkInPercentage: number;
+}
+
+// ───────────────────────────── Admin ─────────────────────────────
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+  isActive: boolean;
+  suspendReason: string | null;
+  createdAt: string;
+}
+
+export interface AdminUserDetail {
+  id: number;
+  email: string;
+  fullName: string;
+  mobile: string | null;
+  department: string | null;
+  enrollmentNo: string | null;
+  roles: string[];
+  isActive: boolean;
+  suspendReason: string | null;
+  createdAt: string;
+}
+
+export interface AdminReview {
+  id: number;
+  eventId: number;
+  eventTitle: string;
+  userId: number;
+  userName: string;
+  rating: number;
+  comment: string | null;
+  submittedOn: string;
+}
+
+export interface MediaItem {
+  id: number;
+  eventId: number;
+  fileType: string;
+  fileUrl: string;
+  caption: string | null;
+  uploadedOn: string;
+}
+
+export interface Certificate {
+  id: number;
+  eventId: number;
+  eventTitle: string;
+  certificateUrl: string;
+  issuedOn: string;
+  feePaid: boolean;
+}
+
+export interface WaitlistEntry {
+  id: number;
+  userId: number;
+  userName: string;
+  eventId: number;
+  waitlistTime: string;
+  status: string;
+}
+
+// ───────────────────────────── Calendar ─────────────────────────────
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  eventDate: string;
+  eventTime: string;
+  venue: string | null;
+  categoryName: string;
+  imageUrl: string | null;
+  status: string;
+  registeredCount: number;
+  maxParticipants: number;
+  isRegistered: boolean;
 }

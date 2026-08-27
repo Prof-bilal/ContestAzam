@@ -19,12 +19,13 @@ public interface IEngagementService
     Task<bool> DeleteReviewAsync(int reviewId, int userId);
     Task<EventReviewSummaryDto> GetEventReviewsAsync(int eventId, int? currentUserId);
 
-    // Notifications
-    Task<List<NotificationDto>> GetMyNotificationsAsync(int userId);
-    Task<bool> MarkNotificationReadAsync(int notificationId, int userId);
-    Task<int> MarkAllNotificationsReadAsync(int userId);
-    Task<int> GetUnreadCountAsync(int userId);
+    // Certificates
+    Task<List<CertificateDto>> GetMyCertificatesAsync(int userId);
 
-    // Notification helpers (called by other services)
-    Task SendNotificationAsync(int userId, string title, string? message);
+    // Waitlist
+    Task<bool> JoinWaitlistAsync(int userId, int eventId);
+    Task<bool> LeaveWaitlistAsync(int userId, int eventId);
+
+    // Calendar
+    Task<CalendarEventDto?> GetEventForCalendarAsync(int eventId);
 }

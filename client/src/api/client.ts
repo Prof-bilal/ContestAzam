@@ -1,4 +1,4 @@
-import type { ApiResponse, AuthData, UserDto, ProfileDto, AdminDashboardStats, AdminOrganizerRequest, EventSummary, EventCategory, EventListResponse, OrganizerEventStats, RegistrationDto, AttendeeDto, ReviewDto, EventReviewSummary, FavoriteDto, NotificationDto, AdminEventDto, PaymentStatus, DigitalPass, AttendanceStats } from "../types";
+import type { ApiResponse, AuthData, UserDto, ProfileDto, AdminDashboardStats, AdminOrganizerRequest, EventSummary, EventCategory, EventListResponse, OrganizerEventStats, RegistrationDto, AttendeeDto, ReviewDto, EventReviewSummary, FavoriteDto, NotificationDto, AdminEventDto, PaymentStatus, DigitalPass, AttendanceStats, MessageDto, ConversationDto, ConversationDetailDto, CalendarEvent } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -8,6 +8,14 @@ let accessToken: string | null = null;
 export const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
+
+// Callback invoked when a refresh detects the account is suspended.
+let onSuspended: ((reason: string | null) => void) | null = null;
+export const setOnSuspended = (cb: ((reason: string | null) => void) | null) => {
+  onSuspended = cb;
+};
+/// Read by the SignalR client for hub authentication.
+export const getAccessToken = () => accessToken;
 
 // Prevent concurrent refresh requests from revoking the entire token family.
 // All callers share the same in-flight promise; only the first 401 triggers a
@@ -38,6 +46,15 @@ export class NetworkError extends Error {
   constructor() {
     super("Unable to connect to the server.");
     this.name = "NetworkError";
+  }
+}
+
+export class SuspendedError extends Error {
+  reason: string | null;
+  constructor(message: string, reason: string | null = null) {
+    super(message);
+    this.name = "SuspendedError";
+    this.reason = reason;
   }
 }
 
@@ -91,6 +108,15 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<ApiR
     /* no body */
   }
 
+  // Handle suspended account — 403 with accountSuspended error code.
+  if (res.status === 403 && payload?.errors?.accountSuspended !== undefined) {
+    setAccessToken(null);
+    throw new SuspendedError(
+      payload.message || "Your account has been suspended.",
+      typeof payload.errors.accountSuspended === "string" ? payload.errors.accountSuspended : null,
+    );
+  }
+
   if (!res.ok || !payload || payload.success === false) {
     throw new ApiError(res.status, payload?.message ?? "Request failed.", payload?.errors);
   }
@@ -108,6 +134,21 @@ async function tryRefresh(): Promise<boolean> {
         method: "POST",
         credentials: "include",
       });
+
+      // Detect account suspension during refresh.
+      if (res.status === 403) {
+        let reason: string | null = null;
+        try {
+          const body = (await res.json()) as ApiResponse;
+          if (body.errors?.accountSuspended !== undefined) {
+            reason = typeof body.errors.accountSuspended === "string" ? body.errors.accountSuspended : null;
+          }
+        } catch { /* no body */ }
+        setAccessToken(null);
+        onSuspended?.(reason);
+        return false;
+      }
+
       if (!res.ok) {
         setAccessToken(null);
         return false;
@@ -150,6 +191,8 @@ export async function register(
   organizationName?: string,
   organizationReason?: string,
   organizationExperience?: string,
+  department?: string,
+  enrollmentNo?: string,
 ): Promise<UserDto> {
   const body: Record<string, unknown> = { name, email, password, confirmPassword, accountType };
   if (accountType === "Organizer") {
@@ -157,6 +200,8 @@ export async function register(
     body.organizationReason = organizationReason;
     body.organizationExperience = organizationExperience;
   }
+  if (department) body.department = department;
+  if (enrollmentNo) body.enrollmentNo = enrollmentNo;
   const res = await request<AuthData>("/api/auth/register", {
     method: "POST",
     body,
@@ -251,6 +296,7 @@ export async function completeOAuthRegistration(
   organizationName?: string,
   organizationReason?: string,
   organizationExperience?: string,
+  profileImageUrl?: string,
 ): Promise<UserDto> {
   const body: Record<string, unknown> = { pendingToken, accountType };
   if (accountType === "Organizer") {
@@ -258,6 +304,7 @@ export async function completeOAuthRegistration(
     body.organizationReason = organizationReason;
     body.organizationExperience = organizationExperience;
   }
+  if (profileImageUrl) body.profileImageUrl = profileImageUrl;
   const res = await request<AuthData>("/api/auth/external/complete", {
     method: "POST",
     body,
@@ -279,10 +326,11 @@ export async function updateProfile(
   mobile?: string,
   department?: string,
   profileImageUrl?: string,
+  enrollmentNo?: string,
 ): Promise<void> {
   await request<unknown>("/api/profile", {
     method: "PUT",
-    body: { fullName, mobile, department, profileImageUrl },
+    body: { fullName, mobile, department, profileImageUrl, enrollmentNo },
   });
 }
 
@@ -291,6 +339,34 @@ export async function deleteAccount(): Promise<void> {
     method: "DELETE",
     body: { confirmation: "DELETE" },
   });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await request<unknown>("/api/profile/change-password", {
+    method: "POST",
+    body: { currentPassword, newPassword },
+  });
+}
+
+export async function uploadProfileImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/api/profile/image`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: formData,
+  });
+
+  const payload = (await res.json()) as ApiResponse<{ url: string }>;
+  if (!res.ok || !payload.success) {
+    throw new ApiError(res.status, payload.message || "Upload failed.");
+  }
+  return payload.data!.url;
 }
 
 // --------------------------------------------------------- Organizer Requests (user)
@@ -396,12 +472,12 @@ export async function getEvents(params?: {
   if (params?.page) qs.set("page", params.page.toString());
   if (params?.pageSize) qs.set("pageSize", params.pageSize.toString());
   const query = qs.toString();
-  const res = await request<EventListResponse>(`/api/events${query ? `?${query}` : ""}`, { auth: false });
+  const res = await request<EventListResponse>(`/api/events${query ? `?${query}` : ""}`);
   return res.data!;
 }
 
 export async function getEvent(id: number): Promise<EventSummary> {
-  const res = await request<EventSummary>(`/api/events/${id}`, { auth: false });
+  const res = await request<EventSummary>(`/api/events/${id}`);
   return res.data!;
 }
 
@@ -569,22 +645,63 @@ export async function deleteMyReview(id: number): Promise<void> {
   await request<unknown>(`/api/participant/reviews/${id}`, { method: "DELETE" });
 }
 
-export async function getMyNotifications(): Promise<NotificationDto[]> {
-  const res = await request<NotificationDto[]>("/api/participant/notifications");
+export async function getMyNotifications(page = 1, pageSize = 20): Promise<NotificationDto[]> {
+  const res = await request<NotificationDto[]>(`/api/notifications?page=${page}&pageSize=${pageSize}`);
   return res.data ?? [];
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
-  const res = await request<{ count: number }>("/api/participant/notifications/unread-count");
+  const res = await request<{ count: number }>("/api/notifications/unread-count");
   return res.data?.count ?? 0;
 }
 
 export async function markNotificationRead(id: number): Promise<void> {
-  await request<unknown>(`/api/participant/notifications/${id}/read`, { method: "PATCH", body: {} });
+  await request<unknown>(`/api/notifications/${id}/read`, { method: "PATCH", body: {} });
+}
+
+export async function markNotificationUnread(id: number): Promise<void> {
+  await request<unknown>(`/api/notifications/${id}/unread`, { method: "PATCH", body: {} });
 }
 
 export async function markAllNotificationsRead(): Promise<void> {
-  await request<unknown>("/api/participant/notifications/read-all", { method: "PATCH", body: {} });
+  await request<unknown>("/api/notifications/read-all", { method: "PATCH", body: {} });
+}
+
+// ───────────────────────────── Messaging ─────────────────────────────
+
+export async function getConversations(): Promise<ConversationDto[]> {
+  const res = await request<ConversationDto[]>("/api/conversations");
+  return res.data ?? [];
+}
+
+export async function getConversation(id: number): Promise<ConversationDetailDto> {
+  const res = await request<ConversationDetailDto>(`/api/conversations/${id}`);
+  return res.data!;
+}
+
+export async function createConversation(recipientId: number): Promise<ConversationDetailDto> {
+  const res = await request<ConversationDetailDto>("/api/conversations", {
+    method: "POST",
+    body: { recipientId },
+  });
+  return res.data!;
+}
+
+export async function sendMessage(conversationId: number, content: string): Promise<MessageDto> {
+  const res = await request<MessageDto>(`/api/conversations/${conversationId}/messages`, {
+    method: "POST",
+    body: { content },
+  });
+  return res.data!;
+}
+
+export async function markConversationRead(conversationId: number): Promise<void> {
+  await request<unknown>(`/api/conversations/${conversationId}/read`, { method: "POST", body: {} });
+}
+
+export async function getUnreadMessageCount(): Promise<number> {
+  const res = await request<{ count: number }>("/api/conversations/unread-count");
+  return res.data?.count ?? 0;
 }
 
 // ───────────────────────────── Organizer ─────────────────────────────
@@ -625,6 +742,19 @@ export async function getOrganizerCalendar(params?: {
   if (params?.toDate) qs.set("toDate", params.toDate);
   const query = qs.toString();
   const res = await request<EventSummary[]>(`/api/organizer/events/calendar${query ? `?${query}` : ""}`);
+  return res.data ?? [];
+}
+
+// ───────────────────────────── Calendar (in-app) ─────────────────────────────
+
+export async function getCalendarEvents(params: {
+  fromDate: string;
+  toDate: string;
+}): Promise<CalendarEvent[]> {
+  const qs = new URLSearchParams();
+  qs.set("fromDate", params.fromDate);
+  qs.set("toDate", params.toDate);
+  const res = await request<CalendarEvent[]>(`/api/events/calendar?${qs.toString()}`);
   return res.data ?? [];
 }
 
@@ -719,4 +849,135 @@ export async function getEventAttendance(eventId: number): Promise<AttendeeDto[]
 export async function getAttendanceStats(eventId: number): Promise<AttendanceStats> {
   const res = await request<AttendanceStats>(`/api/organizer/events/${eventId}/attendance/stats`);
   return res.data!;
+}
+
+// ───────────────────────────── Admin User Management ─────────────────────────────
+
+export async function getAdminUsers(params?: { search?: string; page?: number; pageSize?: number }) {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.page) qs.set("page", params.page.toString());
+  const query = qs.toString();
+  const res = await request<{ users: any[]; total: number; page: number; pageSize: number; totalPages: number }>(
+    `/api/admin/users${query ? `?${query}` : ""}`
+  );
+  return res.data!;
+}
+
+export async function getAdminUser(id: number) {
+  const res = await request<any>(`/api/admin/users/${id}`);
+  return res.data!;
+}
+
+export async function toggleUserActive(id: number, reason?: string) {
+  await request<unknown>(`/api/admin/users/${id}/toggle-active`, {
+    method: "PATCH",
+    body: reason !== undefined ? { reason } : {},
+  });
+}
+
+export async function warnUser(id: number, message: string, sendEmail: boolean) {
+  await request<unknown>(`/api/admin/users/${id}/warn`, {
+    method: "POST",
+    body: { message, sendEmail },
+  });
+}
+
+export async function assignUserRole(id: number, role: string) {
+  await request<unknown>(`/api/admin/users/${id}/roles`, { method: "POST", body: { role } });
+}
+
+export async function removeUserRole(id: number, role: string) {
+  await request<unknown>(`/api/admin/users/${id}/roles/${role}`, { method: "DELETE" });
+}
+
+// ───────────────────────────── Admin Announcements ─────────────────────────────
+
+export async function sendAnnouncement(title: string, message?: string) {
+  await request<unknown>("/api/admin/announcements", { method: "POST", body: { title, message } });
+}
+
+// ───────────────────────────── Admin Reviews Moderation ─────────────────────────────
+
+export async function getAdminReviews(page = 1) {
+  const res = await request<{ reviews: any[]; total: number }>(`/api/admin/reviews?page=${page}`);
+  return res.data!;
+}
+
+export async function deleteAdminReview(id: number) {
+  await request<unknown>(`/api/admin/reviews/${id}`, { method: "DELETE" });
+}
+
+// ───────────────────────────── Admin Reports ─────────────────────────────
+
+export function downloadParticipationReport() {
+  window.open(`/api/admin/reports/participation`, "_blank");
+}
+
+export function downloadUserReport() {
+  window.open(`/api/admin/reports/users`, "_blank");
+}
+
+// ───────────────────────────── Media Gallery ─────────────────────────────
+
+export async function getEventMedia(eventId: number) {
+  const res = await request<any[]>(`/api/organizer/events/${eventId}/media`);
+  return res.data ?? [];
+}
+
+export async function uploadEventMedia(eventId: number, file: File, caption?: string) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (caption) formData.append("caption", caption);
+  const headers: Record<string, string> = {};
+  if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE}/api/organizer/events/${eventId}/media`, {
+    method: "POST", headers, credentials: "include", body: formData,
+  });
+  const payload = await res.json();
+  if (!res.ok || !payload.success) throw new ApiError(res.status, payload.message || "Upload failed.");
+  return payload.data;
+}
+
+export async function deleteEventMedia(id: number) {
+  await request<unknown>(`/api/organizer/media/${id}`, { method: "DELETE" });
+}
+
+// ───────────────────────────── Certificates ─────────────────────────────
+
+export async function getMyCertificates() {
+  const res = await request<any[]>("/api/participant/certificates");
+  return res.data ?? [];
+}
+
+export async function uploadCertificate(eventId: number, studentId: number, certificateUrl: string, feePaid: boolean) {
+  await request<unknown>(`/api/organizer/events/${eventId}/certificates`, {
+    method: "POST", body: { studentId, certificateUrl, feePaid },
+  });
+}
+
+// ───────────────────────────── Waitlist ─────────────────────────────
+
+export async function joinWaitlist(eventId: number) {
+  await request<unknown>(`/api/participant/waitlist/${eventId}`, { method: "POST", body: {} });
+}
+
+export async function leaveWaitlist(eventId: number) {
+  await request<unknown>(`/api/participant/waitlist/${eventId}`, { method: "DELETE" });
+}
+
+// ───────────────────────────── Calendar .ics ─────────────────────────────
+
+export function getCalendarIcsUrl(eventId: number) {
+  return `${API_BASE}/api/participant/events/${eventId}/calendar`;
+}
+
+// ───────────────────────────── Registrant Management ─────────────────────────────
+
+export async function approveRegistrant(eventId: number, studentId: number) {
+  await request<unknown>(`/api/organizer/events/${eventId}/registrations/${studentId}/approve`, { method: "POST", body: {} });
+}
+
+export async function rejectRegistrant(eventId: number, studentId: number) {
+  await request<unknown>(`/api/organizer/events/${eventId}/registrations/${studentId}/reject`, { method: "POST", body: {} });
 }

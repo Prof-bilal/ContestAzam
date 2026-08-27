@@ -110,7 +110,13 @@ public class AuthController : ControllerBase
         // Default role is always Visitor, assigned server-side.
         await _userManager.AddToRoleAsync(user, AppRoles.Default);
 
-        _db.UserDetails.Add(new UserDetails { UserId = user.Id, FullName = request.Name.Trim() });
+        _db.UserDetails.Add(new UserDetails
+        {
+            UserId = user.Id,
+            FullName = request.Name.Trim(),
+            Department = request.Department?.Trim(),
+            EnrollmentNo = request.EnrollmentNo?.Trim()
+        });
 
         // If Organizer was requested, create a pending OrganizerRequest.
         if (isOrganizerRequest)
@@ -159,8 +165,17 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByEmailAsync(request.Email.Trim());
 
         // Generic message regardless of whether the email exists (anti-enumeration).
-        if (user is null || !user.IsActive)
+        if (user is null)
             return Unauthorized(ApiResponse.Fail("Invalid email or password."));
+
+        if (!user.IsActive)
+        {
+            var reason = string.IsNullOrWhiteSpace(user.SuspendReason)
+                ? "Your account has been suspended."
+                : $"Your account has been suspended. Reason: {user.SuspendReason}";
+            return StatusCode(StatusCodes.Status403Forbidden,
+                ApiResponse.Fail(reason, "accountSuspended", user.SuspendReason ?? ""));
+        }
 
         if (_identityOptions.SignIn.RequireConfirmedAccount && !await _userManager.IsEmailConfirmedAsync(user))
             return Unauthorized(ApiResponse.Fail("Please verify your email before signing in.", "emailVerificationRequired", "Email verification required."));
@@ -206,10 +221,20 @@ public class AuthController : ControllerBase
         }
 
         var user = await _userManager.FindByIdAsync(rotation.UserId.ToString());
-        if (user is null || !user.IsActive)
+        if (user is null)
         {
             ClearRefreshCookie();
             return Unauthorized(ApiResponse.Fail("Your session has expired. Please sign in again."));
+        }
+
+        if (!user.IsActive)
+        {
+            ClearRefreshCookie();
+            var reason = string.IsNullOrWhiteSpace(user.SuspendReason)
+                ? "Your account has been suspended."
+                : $"Your account has been suspended. Reason: {user.SuspendReason}";
+            return StatusCode(StatusCodes.Status403Forbidden,
+                ApiResponse.Fail(reason, "accountSuspended", user.SuspendReason ?? ""));
         }
 
         SetRefreshCookie(rotation.NewRawToken!, rotation.NewExpiresAtUtc!.Value);
@@ -415,9 +440,15 @@ public class AuthController : ControllerBase
 
         if (user is not null)
         {
-            // Found via login link. If inactive (deleted account), reactivate.
+            // Found via login link.
             if (!user.IsActive)
             {
+                // Admin-suspended accounts must NOT be reactivated via OAuth.
+                // Only user-deleted accounts (SuspendReason == null) can be restored.
+                if (!string.IsNullOrEmpty(user.SuspendReason))
+                    return RedirectToFrontendError("account_suspended",
+                        new Dictionary<string, string> { ["reason"] = user.SuspendReason! });
+
                 user.Email = email;
                 user.UserName = email;
                 user.EmailConfirmed = true;
@@ -447,6 +478,11 @@ public class AuthController : ControllerBase
             // 3) Existing account with this email.
             if (!existing.IsActive)
             {
+                // Admin-suspended accounts must NOT be reactivated via OAuth.
+                if (!string.IsNullOrEmpty(existing.SuspendReason))
+                    return RedirectToFrontendError("account_suspended",
+                        new Dictionary<string, string> { ["reason"] = existing.SuspendReason! });
+
                 // Deleted/inactive account — allow re-registration via OAuth.
                 // Reactivate the account.
                 existing.Email = email;
@@ -600,7 +636,7 @@ public class AuthController : ControllerBase
         await _userManager.AddToRoleAsync(user, AppRoles.Default);
         await _userManager.AddLoginAsync(user, new UserLoginInfo(pendingInfo.Provider, pendingInfo.ProviderKey, pendingInfo.Provider));
 
-        _db.UserDetails.Add(new UserDetails { UserId = user.Id, FullName = pendingInfo.Name });
+        _db.UserDetails.Add(new UserDetails { UserId = user.Id, FullName = pendingInfo.Name, ProfileImageUrl = request.ProfileImageUrl });
 
         if (isOrganizerRequest)
         {
@@ -817,12 +853,16 @@ public class AuthController : ControllerBase
         return Redirect($"{baseUrl.TrimEnd('/')}{_frontend.PostLoginRedirectPath}");
     }
 
-    private IActionResult RedirectToFrontendError(string code)
+    private IActionResult RedirectToFrontendError(string code, IDictionary<string, string>? extraParams = null)
     {
         var baseUrl = _frontend.AllowedOrigins.FirstOrDefault();
         if (string.IsNullOrEmpty(baseUrl))
             return Unauthorized(ApiResponse.Fail("External sign-in failed."));
-        return Redirect($"{baseUrl.TrimEnd('/')}{_frontend.PostLoginErrorPath}?error={Uri.EscapeDataString(code)}");
+        var query = $"error={Uri.EscapeDataString(code)}";
+        if (extraParams is not null)
+            foreach (var kv in extraParams)
+                query += $"&{Uri.EscapeDataString(kv.Key)}={Uri.EscapeDataString(kv.Value)}";
+        return Redirect($"{baseUrl.TrimEnd('/')}{_frontend.PostLoginErrorPath}?{query}");
     }
 }
 

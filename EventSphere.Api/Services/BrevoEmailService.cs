@@ -42,6 +42,9 @@ public class BrevoEmailService : IEmailService
         await SendAsync(toEmail, subject, htmlContent);
     }
 
+    public Task SendTransactionalAsync(string toEmail, string subject, string htmlContent)
+        => SendAsync(toEmail, subject, htmlContent);
+
     private async Task SendAsync(string toEmail, string subject, string htmlContent)
     {
         if (string.IsNullOrWhiteSpace(_options.ApiKey))

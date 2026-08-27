@@ -3,11 +3,12 @@ import type { ReactNode } from "react";
 import type { UserDto } from "../types";
 import * as api from "../api/client";
 
-type Status = "loading" | "authenticated" | "unauthenticated";
+type Status = "loading" | "authenticated" | "unauthenticated" | "suspended";
 
 interface AuthContextValue {
   user: UserDto | null;
   status: Status;
+  suspendReason: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     name: string,
@@ -18,6 +19,8 @@ interface AuthContextValue {
     organizationName?: string,
     organizationReason?: string,
     organizationExperience?: string,
+    department?: string,
+    enrollmentNo?: string,
   ) => Promise<"ok" | "emailVerificationRequired">;
   logout: () => Promise<void>;
   restoreSession: () => Promise<boolean>;
@@ -28,6 +31,18 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<UserDto | null>(null);
   const [status, setStatus] = useState<Status>("loading");
+  const [suspendReason, setSuspendReason] = useState<string | null>(null);
+
+  // Register the global suspension callback so any 403 from the API client
+  // forces the user out immediately.
+  useEffect(() => {
+    api.setOnSuspended((reason) => {
+      setUser(null);
+      setSuspendReason(reason);
+      setStatus("suspended");
+    });
+    return () => api.setOnSuspended(null);
+  }, []);
 
   const restoreSession = useCallback(async () => {
     const restored = await api.bootstrap();
@@ -43,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const u = await api.login(email, password);
     setUser(u);
+    setSuspendReason(null);
     setStatus("authenticated");
   }, []);
 
@@ -56,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organizationName?: string,
       organizationReason?: string,
       organizationExperience?: string,
+      department?: string,
+      enrollmentNo?: string,
     ) => {
       const u = await api.register(
         name,
@@ -66,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         organizationName,
         organizationReason,
         organizationExperience,
+        department,
+        enrollmentNo,
       );
       setUser(u);
       setStatus("authenticated");
@@ -77,12 +97,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await api.logout();
     setUser(null);
+    setSuspendReason(null);
     setStatus("unauthenticated");
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ user, status, login, register, logout, restoreSession }),
-    [user, status, login, register, logout, restoreSession],
+    () => ({ user, status, suspendReason, login, register, logout, restoreSession }),
+    [user, status, suspendReason, login, register, logout, restoreSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

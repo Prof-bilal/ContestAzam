@@ -14,6 +14,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // SignalR hubs (negotiate is HTTP POST; upgrade is WebSocket).
+      "/hubs": {
+        target: "http://localhost:5244",
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
       "/uploads": {
         target: "http://localhost:5244",
         changeOrigin: true,

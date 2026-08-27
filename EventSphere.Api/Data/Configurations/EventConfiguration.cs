@@ -26,6 +26,9 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(e => e.RejectionReason)
+            .HasMaxLength(1000);
+
         builder.Property(e => e.Price)
             .HasColumnType("decimal(18,2)");
 

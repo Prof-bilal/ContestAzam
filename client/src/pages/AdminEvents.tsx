@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { LogoutButton } from "../components/LogoutButton";
 import { useToast } from "../components/Toast";
 import { getAdminEvents, approveEvent, rejectEvent } from "../api/client";
 import type { AdminEventDto } from "../types";
 
 export function AdminEvents() {
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [events, setEvents] = useState<AdminEventDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,12 +50,20 @@ export function AdminEvents() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>Admin</span>
+        </div>
         <nav className="admin-nav">
           <Link to="/admin" className="admin-nav-item">Dashboard</Link>
-          <Link to="/admin/organizer-requests" className="admin-nav-item">Organizer Requests</Link>
+          <Link to="/admin/users" className="admin-nav-item">Users</Link>
           <Link to="/admin/events" className="admin-nav-item active">Events</Link>
-          <Link to="/events" className="admin-nav-item">Browse Events</Link>
+          <Link to="/admin/organizer-requests" className="admin-nav-item">Organizer Requests</Link>
+          <Link to="/admin/reviews" className="admin-nav-item">Reviews</Link>
+          <Link to="/admin/announcements" className="admin-nav-item">Announcements</Link>
+          <Link to="/admin/reports" className="admin-nav-item">Reports</Link>
         </nav>
+        <LogoutButton style={{ marginTop: "auto" }} />
       </aside>
       <main className="admin-main">
         <div className="admin-header">
@@ -93,7 +104,7 @@ export function AdminEvents() {
                 <tbody>
                   {events.map((evt) => (
                     <tr key={evt.id}>
-                      <td><Link to={`/events/${evt.id}`} style={{ color: "#818cf8" }}>{evt.title}</Link></td>
+                      <td><Link to={`/events/${evt.id}`} style={{ color: "var(--deep-teal)" }}>{evt.title}</Link></td>
                       <td>
                         <div>{evt.organizerName}</div>
                         <div className="muted">{evt.organizerEmail}</div>
@@ -105,7 +116,7 @@ export function AdminEvents() {
                       <td>
                         {evt.status === "PendingApproval" && (
                           <div style={{ display: "flex", gap: "0.35rem" }}>
-                            <button className="btn btn-small" onClick={() => handleApprove(evt.id)} style={{ width: "auto", marginTop: 0, background: "var(--ok)" }}>Approve</button>
+                            <button className="btn btn-small" onClick={() => handleApprove(evt.id)} style={{ width: "auto", marginTop: 0, background: "var(--deep-teal)" }}>Approve</button>
                             <button className="btn btn-danger btn-small" onClick={() => setRejectModal(evt.id)}>Reject</button>
                           </div>
                         )}

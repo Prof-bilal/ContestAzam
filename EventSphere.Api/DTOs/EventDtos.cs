@@ -118,6 +118,7 @@ public class EventSummaryDto
     public int MaxParticipants { get; set; }
     public int RegisteredCount { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? RejectionReason { get; set; }
     public string? ImageUrl { get; set; }
     public DateTime? RegistrationDeadline { get; set; }
     public bool IsPaid { get; set; }
@@ -164,6 +165,7 @@ public class AdminEventDto
     public int MaxParticipants { get; set; }
     public int RegisteredCount { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? RejectionReason { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -190,4 +192,19 @@ public class CalendarQueryParams
 {
     public DateTime? FromDate { get; set; }
     public DateTime? ToDate { get; set; }
+}
+
+public class CalendarApiEventDto
+{
+    public int Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public DateTime EventDate { get; set; }
+    public TimeSpan EventTime { get; set; }
+    public string? Venue { get; set; }
+    public string CategoryName { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public int RegisteredCount { get; set; }
+    public int MaxParticipants { get; set; }
+    public bool IsRegistered { get; set; }
 }

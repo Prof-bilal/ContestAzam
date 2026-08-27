@@ -9,4 +9,7 @@ public interface IEmailService
 {
     Task SendEmailVerificationAsync(string toEmail, string userName, string verificationUrl);
     Task SendPasswordResetAsync(string toEmail, string userName, string resetUrl);
+
+    /// <summary>Send a fully-rendered transactional email (subject + HTML body).</summary>
+    Task SendTransactionalAsync(string toEmail, string subject, string htmlContent);
 }

@@ -104,6 +104,7 @@ public class ProfileController : ControllerBase
 
         details.Mobile = request.Mobile?.Trim();
         details.Department = request.Department?.Trim();
+        details.EnrollmentNo = request.EnrollmentNo?.Trim();
         details.ProfileImageUrl = request.ProfileImageUrl;
 
         await _db.SaveChangesAsync();
@@ -142,6 +143,87 @@ public class ProfileController : ControllerBase
         _logger.LogInformation("User {UserId} deleted their account.", userId.Value);
 
         return Ok(ApiResponse.Ok("Account deleted successfully."));
+    }
+
+    // ───────────────────────────── Profile Image Upload ─────────────────────────────
+
+    private static readonly string[] AllowedImageExtensions = { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+    private static readonly string[] AllowedImageContentTypes = { "image/jpeg", "image/png", "image/webp", "image/gif" };
+    private const long MaxProfileImageSize = 2 * 1024 * 1024; // 2 MB
+
+    /// <summary>Upload a profile image. Returns the relative URL.</summary>
+    [HttpPost("image")]
+    [RequestSizeLimit(MaxProfileImageSize)]
+    public async Task<IActionResult> UploadProfileImage(IFormFile file)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var user = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (user is null || !user.IsActive)
+            return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        if (file is null || file.Length == 0)
+            return BadRequest(ApiResponse.Fail("No file uploaded."));
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!AllowedImageExtensions.Contains(ext))
+            return BadRequest(ApiResponse.Fail("Only JPG, PNG, WebP, and GIF images are allowed."));
+
+        if (!AllowedImageContentTypes.Contains(file.ContentType))
+            return BadRequest(ApiResponse.Fail("Invalid file type."));
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "profiles");
+        Directory.CreateDirectory(uploadsDir);
+
+        var fileName = $"profile_{userId.Value}_{Guid.NewGuid():N}{ext}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var relativeUrl = $"/uploads/profiles/{fileName}";
+
+        // Update the user's profile image URL in the database.
+        var details = await _db.UserDetails.FirstOrDefaultAsync(d => d.UserId == userId.Value);
+        if (details is null)
+        {
+            details = new UserDetails { UserId = userId.Value, FullName = user.Email!, ProfileImageUrl = relativeUrl };
+            _db.UserDetails.Add(details);
+        }
+        else
+        {
+            details.ProfileImageUrl = relativeUrl;
+        }
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<object>.Ok(new { url = relativeUrl }));
+    }
+
+    /// <summary>Change password for the authenticated user.</summary>
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var user = await _userManager.FindByIdAsync(userId.Value.ToString());
+        if (user is null || !user.IsActive)
+            return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            var errors = result.Errors.Select(e => e.Description).ToList();
+            return BadRequest(ApiResponse.Fail("Password change failed.", new Dictionary<string, string[]> { ["password"] = errors.ToArray() }));
+        }
+
+        // Revoke all refresh tokens to force re-authentication on other devices.
+        await _refreshService.RevokeAllForUserAsync(user.Id);
+
+        _logger.LogInformation("User {UserId} changed their password.", userId.Value);
+        return Ok(ApiResponse.Ok("Password changed successfully. You may need to sign in again on other devices."));
     }
 
     private int? GetUserId()

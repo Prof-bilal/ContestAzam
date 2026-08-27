@@ -10,6 +10,9 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (status === "loading") {
     return <div className="center-screen">Loading…</div>;
   }
+  if (status === "suspended") {
+    return <Navigate to="/suspended" replace />;
+  }
   if (status !== "authenticated") {
     return <Navigate to="/login" replace />;
   }

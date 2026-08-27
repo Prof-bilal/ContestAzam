@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/Toast";
 import { useCountdown } from "../hooks/useCountdown";
-import { ApiError, NetworkError, RateLimitError, oauthUrl } from "../api/client";
+import { ApiError, NetworkError, RateLimitError, SuspendedError, oauthUrl } from "../api/client";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LOCKOUT_STORAGE_KEY = "es_lockout_until";
@@ -32,6 +32,7 @@ export function Login() {
   const { login } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const countdown = useCountdown();
 
   const [email, setEmail] = useState("");
@@ -40,8 +41,16 @@ export function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<string | null>(null);
 
-  // Restore lockout timer on mount (survives page refresh)
+  // Handle error query params from OAuth redirects (e.g. account_suspended).
   useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "account_suspended") {
+      const reason = searchParams.get("reason") || "";
+      addToast("error", reason || "Your account has been suspended by an administrator.");
+      navigate(`/suspended${reason ? `?reason=${encodeURIComponent(reason)}` : ""}`, { replace: true });
+      return;
+    }
+    // Restore lockout timer on mount (survives page refresh)
     const remaining = getRemainingLockout();
     if (remaining > 0) {
       countdown.start(remaining);
@@ -77,7 +86,11 @@ export function Login() {
       addToast("success", "Welcome back.");
       navigate("/dashboard");
     } catch (err) {
-      if (err instanceof RateLimitError) {
+      if (err instanceof SuspendedError) {
+        // Show the suspension message and redirect.
+        addToast("error", err.reason || err.message);
+        navigate("/suspended");
+      } else if (err instanceof RateLimitError) {
         countdown.start(err.retryAfterSeconds);
         addToast("error", `Too many attempts. Try again in ${err.retryAfterSeconds} seconds.`);
       } else if (err instanceof ApiError) {

@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { useToast } from "../components/Toast";
-import { ApiError, NetworkError, completeOAuthRegistration } from "../api/client";
+import { ApiError, NetworkError, completeOAuthRegistration, uploadProfileImage } from "../api/client";
 
 function containsEmoji(text: string): boolean {
   for (const char of text) {
@@ -34,6 +34,8 @@ export function OAuthComplete() {
   const [orgName, setOrgName] = useState("");
   const [orgReason, setOrgReason] = useState("");
   const [orgExperience, setOrgExperience] = useState("");
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,13 +80,25 @@ export function OAuthComplete() {
     if (!validate()) return;
 
     setSubmitting(true);
-    try {
+    try {        // Upload profile image if selected
+      let profileImageUrl: string | undefined;
+      if (profileImageFile) {
+        try {
+          profileImageUrl = await uploadProfileImage(profileImageFile);
+        } catch {
+          addToast("error", "Failed to upload profile image.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       await completeOAuthRegistration(
         pendingToken,
         accountType,
         accountType === "Organizer" ? orgName.trim() : undefined,
         accountType === "Organizer" ? orgReason.trim() : undefined,
         accountType === "Organizer" ? orgExperience.trim() || undefined : undefined,
+        profileImageUrl,
       );
       // Restore session to pick up the new user state.
       await restoreSession();
@@ -134,14 +148,10 @@ export function OAuthComplete() {
                 alignItems: "flex-start",
                 gap: "0.5rem",
                 padding: "0.75rem",
-                border:
-                  accountType === "Visitor" ? "2px solid #6366f1" : "1px solid #334155",
-                borderRadius: "8px",
+                border: "1px solid var(--ink-violet)",
+                borderRadius: "0px",
                 cursor: disabled ? "not-allowed" : "pointer",
-                background:
-                  accountType === "Visitor"
-                    ? "rgba(99,102,241,0.1)"
-                    : "transparent",
+                background: accountType === "Visitor" ? "rgba(250,229,155,0.3)" : "transparent",
                 opacity: disabled ? 0.6 : 1,
               }}
             >
@@ -156,7 +166,7 @@ export function OAuthComplete() {
               />
               <div>
                 <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>Visitor</div>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
                   Discover and participate in events.
                 </div>
               </div>
@@ -168,16 +178,10 @@ export function OAuthComplete() {
                 alignItems: "flex-start",
                 gap: "0.5rem",
                 padding: "0.75rem",
-                border:
-                  accountType === "Organizer"
-                    ? "2px solid #6366f1"
-                    : "1px solid #334155",
-                borderRadius: "8px",
+                border: "1px solid var(--ink-violet)",
+                borderRadius: "0px",
                 cursor: disabled ? "not-allowed" : "pointer",
-                background:
-                  accountType === "Organizer"
-                    ? "rgba(99,102,241,0.1)"
-                    : "transparent",
+                background: accountType === "Organizer" ? "rgba(250,229,155,0.3)" : "transparent",
                 opacity: disabled ? 0.6 : 1,
               }}
             >
@@ -191,10 +195,8 @@ export function OAuthComplete() {
                 style={{ marginTop: "0.2rem" }}
               />
               <div>
-                <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>
-                  Organizer
-                </div>
-                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                <div style={{ fontWeight: 600, fontSize: "0.9rem" }}>Organizer</div>
+                <div style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
                   Create and manage events.
                   <br />
                   Requires Admin approval.
@@ -244,6 +246,67 @@ export function OAuthComplete() {
             />
           </>
         )}
+
+        <div style={{ textAlign: "center", margin: "0.75rem 0" }}>
+          <div
+            onClick={() => !disabled && document.getElementById("oauth-profile-image")?.click()}
+            style={{
+              display: "inline-block",
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              cursor: disabled ? "not-allowed" : "pointer",
+              overflow: "hidden",
+              position: "relative",
+              border: "2px dashed var(--ink-violet)",
+            }}
+          >
+            {profileImagePreview ? (
+              <img src={profileImagePreview} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "0.75rem",
+                color: "var(--muted)",
+              }}>
+                Add Photo
+              </div>
+            )}
+          </div>
+          <input
+            id="oauth-profile-image"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 2 * 1024 * 1024) {
+                addToast("error", "Image must be less than 2MB.");
+                return;
+              }
+              setProfileImageFile(file);
+              const reader = new FileReader();
+              reader.onload = () => setProfileImagePreview(reader.result as string);
+              reader.readAsDataURL(file);
+            }}
+          />
+          {profileImageFile && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ marginTop: "0.25rem", fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}
+              onClick={() => { setProfileImageFile(null); setProfileImagePreview(null); }}
+              disabled={disabled}
+            >
+              Remove
+            </button>
+          )}
+        </div>
 
         <button className="btn btn-primary" type="submit" disabled={disabled}>
           {submitting ? "Creating account…" : "Complete Registration"}

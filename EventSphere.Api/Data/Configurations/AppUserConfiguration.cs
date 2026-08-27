@@ -22,5 +22,8 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
 
         builder.Property(u => u.IsActive)
             .HasDefaultValue(true);
+
+        builder.Property(u => u.SuspendReason)
+            .HasMaxLength(500);
     }
 }

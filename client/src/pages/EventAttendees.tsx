@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { LogoutButton } from "../components/LogoutButton";
 import { useToast } from "../components/Toast";
 import { getEventAttendees, checkInAttendee, getEvent } from "../api/client";
 import type { AttendeeDto, EventSummary } from "../types";
 
 export function EventAttendees() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [event, setEvent] = useState<EventSummary | null>(null);
   const [attendees, setAttendees] = useState<AttendeeDto[]>([]);
@@ -38,23 +41,33 @@ export function EventAttendees() {
     }
   };
 
+  const highestRole = ["Admin", "Organizer", "Participant"].find((r) =>
+    user?.roles.includes(r),
+  ) || "Visitor";
+
   if (loading) return <div className="loading-state">Loading attendees...</div>;
 
   return (
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>
+            {highestRole}
+          </span>
+        </div>
         <nav className="admin-nav">
           <Link to="/dashboard" className="admin-nav-item">Dashboard</Link>
           <Link to="/organizer/events" className="admin-nav-item active">My Events</Link>
-          <Link to="/my-registrations" className="admin-nav-item">My Registrations</Link>
           <Link to="/events" className="admin-nav-item">Browse Events</Link>
         </nav>
+        <LogoutButton style={{ marginTop: "auto" }} />
       </aside>
       <main className="admin-main">
         <div className="admin-header">
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <Link to="/organizer/events" className="btn btn-secondary btn-small">&larr;</Link>
+            <Link to="/organizer/events" className="btn btn-secondary btn-small" style={{ width: "auto" }}>&larr;</Link>
             <div>
               <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Attendees</h1>
               <p className="muted">{event?.title ?? "Event"} — {attendees.length} registered</p>

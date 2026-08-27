@@ -13,7 +13,7 @@ import type { AdminOrganizerRequest } from "../types";
 type Filter = "All" | "Pending" | "Approved" | "Rejected";
 
 export function AdminOrganizerRequests() {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -94,16 +94,18 @@ export function AdminOrganizerRequests() {
     <div className="admin-layout">
       <aside className="admin-sidebar">
         <div className="admin-brand">EventSphere</div>
+        <div className="sidebar-welcome">
+          Welcome, <strong>{user?.name}</strong>
+          <span className="role-badge" style={{ marginLeft: "0.5rem", fontSize: "11px" }}>Admin</span>
+        </div>
         <nav className="admin-nav">
-          <Link to="/admin" className="admin-nav-item">
-            Dashboard
-          </Link>
-          <Link to="/admin/organizer-requests" className="admin-nav-item active">
-            Organizer Requests
-          </Link>
-          <Link to="/dashboard" className="admin-nav-item">
-            Main App
-          </Link>
+          <Link to="/admin" className="admin-nav-item">Dashboard</Link>
+          <Link to="/admin/users" className="admin-nav-item">Users</Link>
+          <Link to="/admin/events" className="admin-nav-item">Events</Link>
+          <Link to="/admin/organizer-requests" className="admin-nav-item active">Organizer Requests</Link>
+          <Link to="/admin/reviews" className="admin-nav-item">Reviews</Link>
+          <Link to="/admin/announcements" className="admin-nav-item">Announcements</Link>
+          <Link to="/admin/reports" className="admin-nav-item">Reports</Link>
         </nav>
         <button className="btn btn-secondary" onClick={onLogout} style={{ marginTop: "auto" }}>
           Logout
@@ -222,7 +224,7 @@ export function AdminOrganizerRequests() {
                     disabled={actionBusy !== null}
                     style={{
                       flex: 1,
-                      background: "var(--ok)",
+                      background: "var(--deep-teal)",
                     }}
                   >
                     {actionBusy === "approve" ? "Approving..." : "Approve"}

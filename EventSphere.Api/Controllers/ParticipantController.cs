@@ -123,51 +123,75 @@ public class ParticipantController : ControllerBase
         return Ok(ApiResponse.Ok("Review deleted."));
     }
 
-    // ───────────────────────────── Notifications ─────────────────────────────
+    // ───────────────────────────── Certificates ─────────────────────────────
 
-    /// <summary>List my notifications.</summary>
-    [HttpGet("notifications")]
-    public async Task<IActionResult> GetMyNotifications()
+    /// <summary>List my certificates.</summary>
+    [HttpGet("certificates")]
+    public async Task<IActionResult> GetMyCertificates()
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
 
-        var notifications = await _engagement.GetMyNotificationsAsync(userId.Value);
-        return Ok(ApiResponse<List<NotificationDto>>.Ok(notifications));
+        var certs = await _engagement.GetMyCertificatesAsync(userId.Value);
+        return Ok(ApiResponse<List<CertificateDto>>.Ok(certs));
     }
 
-    /// <summary>Get unread notification count.</summary>
-    [HttpGet("notifications/unread-count")]
-    public async Task<IActionResult> GetUnreadCount()
+    // ───────────────────────────── Waitlist ─────────────────────────────
+
+    /// <summary>Join the waitlist for a full event.</summary>
+    [HttpPost("waitlist/{eventId:int}")]
+    public async Task<IActionResult> JoinWaitlist(int eventId)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
 
-        var count = await _engagement.GetUnreadCountAsync(userId.Value);
-        return Ok(ApiResponse<object>.Ok(new { count }));
+        var result = await _engagement.JoinWaitlistAsync(userId.Value, eventId);
+        if (!result)
+            return Conflict(ApiResponse.Fail("Event is not full, already on waitlist, or not available."));
+
+        return Ok(ApiResponse.Ok("Added to waitlist."));
     }
 
-    /// <summary>Mark a notification as read.</summary>
-    [HttpPatch("notifications/{id:int}/read")]
-    public async Task<IActionResult> MarkNotificationRead(int id)
+    /// <summary>Leave the waitlist.</summary>
+    [HttpDelete("waitlist/{eventId:int}")]
+    public async Task<IActionResult> LeaveWaitlist(int eventId)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
 
-        var marked = await _engagement.MarkNotificationReadAsync(id, userId.Value);
-        if (!marked) return NotFound(ApiResponse.Fail("Notification not found."));
+        var result = await _engagement.LeaveWaitlistAsync(userId.Value, eventId);
+        if (!result) return NotFound(ApiResponse.Fail("Not on the waitlist for this event."));
 
-        return Ok(ApiResponse.Ok("Notification marked as read."));
+        return Ok(ApiResponse.Ok("Removed from waitlist."));
     }
 
-    /// <summary>Mark all notifications as read.</summary>
-    [HttpPatch("notifications/read-all")]
-    public async Task<IActionResult> MarkAllNotificationsRead()
+    /// <summary>Get .ics calendar file for an event.</summary>
+    [HttpGet("events/{eventId:int}/calendar")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetEventCalendar(int eventId)
     {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+        var evt = await _engagement.GetEventForCalendarAsync(eventId);
+        if (evt is null) return NotFound(ApiResponse.Fail("Event not found."));
 
-        var count = await _engagement.MarkAllNotificationsReadAsync(userId.Value);
-        return Ok(ApiResponse<object>.Ok(new { markedCount = count }));
+        var startUtc = DateTime.SpecifyKind(evt.EventDate.Add(evt.EventTime), DateTimeKind.Utc);
+        var endUtc = startUtc.AddHours(2);
+
+        var ics = $"""
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        PRODID:-//EventSphere//EN
+        BEGIN:VEVENT
+        DTSTART:{startUtc:yyyyMMddTHHmmssZ}
+        DTEND:{endUtc:yyyyMMddTHHmmssZ}
+        SUMMARY:{EscapeIcs(evt.Title)}
+        DESCRIPTION:{EscapeIcs(evt.Description ?? "")}
+        LOCATION:{EscapeIcs(evt.Venue ?? "")}
+        END:VEVENT
+        END:VCALENDAR
+        """;
+
+        return File(System.Text.Encoding.UTF8.GetBytes(ics), "text/calendar", $"{evt.Title}.ics");
     }
+
+    private static string EscapeIcs(string text) => text.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\n", "\\n");
 }

@@ -20,6 +20,7 @@ public class OrganizerController : ControllerBase
     private readonly IAttendanceService _attendanceService;
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
+    private readonly INotificationService _notifications;
     private readonly ILogger<OrganizerController> _logger;
 
     public OrganizerController(
@@ -28,6 +29,7 @@ public class OrganizerController : ControllerBase
         IAttendanceService attendanceService,
         AppDbContext db,
         UserManager<AppUser> userManager,
+        INotificationService notifications,
         ILogger<OrganizerController> logger)
     {
         _eventService = eventService;
@@ -35,6 +37,7 @@ public class OrganizerController : ControllerBase
         _attendanceService = attendanceService;
         _db = db;
         _userManager = userManager;
+        _notifications = notifications;
         _logger = logger;
     }
 
@@ -194,9 +197,7 @@ public class OrganizerController : ControllerBase
             .ToListAsync();
 
         return Ok(ApiResponse<List<AttendeeDto>>.Ok(attendees));
-    }
-
-    /// <summary>Check in an attendee (mark attendance) for an event.</summary>
+    }    /// <summary>Check in an attendee (mark attendance) for an event.</summary>
     [HttpPost("events/{eventId:int}/attendees/{studentId:int}/check-in")]
     public async Task<IActionResult> CheckInAttendee(int eventId, int studentId)
     {
@@ -213,6 +214,17 @@ public class OrganizerController : ControllerBase
             .FirstOrDefaultAsync(r => r.EventId == eventId && r.StudentId == studentId && r.Status == RegistrationStatus.Confirmed);
         if (registration is null)
             return NotFound(ApiResponse.Fail("Student is not registered for this event."));
+
+        // P0-5: For paid events, verify payment is complete.
+        if (evt.IsPaid)
+        {
+            var hasPayment = await _db.Payments.AnyAsync(p =>
+                p.EventId == eventId &&
+                p.UserId == studentId &&
+                p.Status == PaymentStatus.Succeeded);
+            if (!hasPayment)
+                return BadRequest(ApiResponse.Fail("Payment has not been confirmed for this registration."));
+        }
 
         // Check if already checked in
         var existing = await _db.Attendances
@@ -238,8 +250,7 @@ public class OrganizerController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        _logger.LogInformation("Organizer {OrganizerId} checked in student {StudentId} for event {EventId}.",
-            userId, studentId, eventId);
+        _logger.LogInformation("Organizer {OrganizerId} checked in student {StudentId} for event {EventId}.", userId, studentId, eventId);
 
         return Ok(ApiResponse.Ok("Attendee checked in."));
     }
@@ -251,7 +262,11 @@ public class OrganizerController : ControllerBase
     [Authorize(Roles = $"{AppRoles.Organizer},{AppRoles.Admin}")]
     public async Task<IActionResult> CheckInByToken([FromBody] CheckInRequest request)
     {
-        var result = await _attendanceService.CheckInByTokenAsync(request.Token);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var isAdmin = User.IsInRole(AppRoles.Admin);
+        var result = await _attendanceService.CheckInByTokenAsync(request.Token, userId.Value, isAdmin);
         if (!result.Success)
             return BadRequest(ApiResponse.Fail(result.Message));
 
@@ -278,5 +293,198 @@ public class OrganizerController : ControllerBase
 
         var stats = await _attendanceService.GetAttendanceStatsAsync(eventId, userId.Value);
         return Ok(ApiResponse<AttendanceStatsDto>.Ok(stats));
+    }
+
+    // ───────────────────────────── Approve/Reject Registrants ─────────────────────────────
+
+    /// <summary>Approve a pending registration for an event.</summary>
+    [HttpPost("events/{eventId:int}/registrations/{studentId:int}/approve")]
+    public async Task<IActionResult> ApproveRegistration(int eventId, int studentId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var evt = await _db.Events.FindAsync(eventId);
+        if (evt is null || evt.OrganizerId != userId.Value)
+            return NotFound(ApiResponse.Fail("Event not found or you do not have permission."));
+
+        var reg = await _db.Registrations
+            .FirstOrDefaultAsync(r => r.EventId == eventId && r.StudentId == studentId);
+        if (reg is null) return NotFound(ApiResponse.Fail("Registration not found."));
+        if (reg.Status == RegistrationStatus.Confirmed)
+            return Conflict(ApiResponse.Fail("Registration is already confirmed."));
+
+        reg.Status = RegistrationStatus.Confirmed;
+        reg.CheckInToken = Guid.NewGuid().ToString("N");
+        await _db.SaveChangesAsync();
+
+        // Notify the student.
+        await _notifications.SendAsync(studentId, NotificationType.RegistrationConfirmed,
+            "Registration Approved",
+            $"Your registration for \"{evt.Title}\" has been approved.",
+            relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+
+        return Ok(ApiResponse.Ok("Registration approved."));
+    }
+
+    /// <summary>Reject a registration for an event.</summary>
+    [HttpPost("events/{eventId:int}/registrations/{studentId:int}/reject")]
+    public async Task<IActionResult> RejectRegistration(int eventId, int studentId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var evt = await _db.Events.FindAsync(eventId);
+        if (evt is null || evt.OrganizerId != userId.Value)
+            return NotFound(ApiResponse.Fail("Event not found or you do not have permission."));
+
+        var reg = await _db.Registrations
+            .FirstOrDefaultAsync(r => r.EventId == eventId && r.StudentId == studentId);
+        if (reg is null) return NotFound(ApiResponse.Fail("Registration not found."));
+        if (reg.Status == RegistrationStatus.Cancelled)
+            return Conflict(ApiResponse.Fail("Registration is already cancelled."));
+
+        reg.Status = RegistrationStatus.Cancelled;
+        await _db.SaveChangesAsync();
+
+        await _notifications.SendAsync(studentId, NotificationType.RegistrationCancelled,
+            "Registration Rejected",
+            $"Your registration for \"{evt.Title}\" was not approved by the organizer.",
+            relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/events/{evt.Id}");
+
+        return Ok(ApiResponse.Ok("Registration rejected."));
+    }
+
+    // ───────────────────────────── Media Gallery ─────────────────────────────
+
+    /// <summary>List media for an event.</summary>
+    [HttpGet("events/{eventId:int}/media")]
+    public async Task<IActionResult> GetEventMedia(int eventId)
+    {
+        var media = await _db.MediaGalleries
+            .Where(m => m.EventId == eventId)
+            .OrderByDescending(m => m.UploadedOn)
+            .Select(m => new MediaDto
+            {
+                Id = m.Id,
+                EventId = m.EventId,
+                FileType = m.FileType.ToString(),
+                FileUrl = m.FileUrl,
+                Caption = m.Caption,
+                UploadedOn = m.UploadedOn
+            })
+            .ToListAsync();
+        return Ok(ApiResponse<List<MediaDto>>.Ok(media));
+    }
+
+    /// <summary>Upload media for an event.</summary>
+    [HttpPost("events/{eventId:int}/media")]
+    [RequestSizeLimit(10 * 1024 * 1024)] // 10 MB
+    public async Task<IActionResult> UploadMedia(int eventId, IFormFile file, [FromQuery] string? caption)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var evt = await _db.Events.FindAsync(eventId);
+        if (evt is null || evt.OrganizerId != userId.Value)
+            return NotFound(ApiResponse.Fail("Event not found or you do not have permission."));
+
+        if (file is null || file.Length == 0)
+            return BadRequest(ApiResponse.Fail("No file uploaded."));
+
+        var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var imageExts = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        var videoExts = new[] { ".mp4", ".webm", ".mov" };
+        var mediaType = imageExts.Contains(ext) ? MediaType.Image
+            : videoExts.Contains(ext) ? MediaType.Video
+            : (MediaType?)null;
+
+        if (mediaType is null)
+            return BadRequest(ApiResponse.Fail("Only image (JPG, PNG, WebP, GIF) and video (MP4, WebM, MOV) files are allowed."));
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+        Directory.CreateDirectory(uploadsDir);
+        var fileName = $"{Guid.NewGuid():N}{ext}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+        using (var stream = new FileStream(filePath, FileMode.Create))
+            await file.CopyToAsync(stream);
+
+        var gallery = new MediaGallery
+        {
+            EventId = eventId,
+            FileType = mediaType.Value,
+            FileUrl = $"/uploads/{fileName}",
+            UploadedBy = userId.Value,
+            Caption = caption?.Trim()
+        };
+        _db.MediaGalleries.Add(gallery);
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<MediaDto>.Ok(new MediaDto
+        {
+            Id = gallery.Id,
+            EventId = gallery.EventId,
+            FileType = gallery.FileType.ToString(),
+            FileUrl = gallery.FileUrl,
+            Caption = gallery.Caption,
+            UploadedOn = gallery.UploadedOn
+        }));
+    }
+
+    /// <summary>Delete media.</summary>
+    [HttpDelete("media/{id:int}")]
+    public async Task<IActionResult> DeleteMedia(int id)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var media = await _db.MediaGalleries.FindAsync(id);
+        if (media is null) return NotFound(ApiResponse.Fail("Media not found."));
+        if (media.UploadedBy != userId.Value)
+            return Forbid();
+
+        _db.MediaGalleries.Remove(media);
+        await _db.SaveChangesAsync();
+        return Ok(ApiResponse.Ok("Media deleted."));
+    }
+
+    // ───────────────────────────── Certificates ─────────────────────────────
+
+    /// <summary>Upload a certificate for a participant.</summary>
+    [HttpPost("events/{eventId:int}/certificates")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult> UploadCertificate(int eventId, [FromBody] UploadCertificateRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized(ApiResponse.Fail("Invalid session."));
+
+        var evt = await _db.Events.FindAsync(eventId);
+        if (evt is null || evt.OrganizerId != userId.Value)
+            return NotFound(ApiResponse.Fail("Event not found or you do not have permission."));
+
+        // Verify the student attended.
+        var attended = await _db.Attendances
+            .AnyAsync(a => a.EventId == eventId && a.StudentId == request.StudentId && a.Attended);
+        if (!attended)
+            return BadRequest(ApiResponse.Fail("Student has not been marked as attended for this event."));
+
+        var cert = new Certificate
+        {
+            EventId = eventId,
+            StudentId = request.StudentId,
+            CertificateUrl = request.CertificateUrl.Trim(),
+            IssuedOn = DateTime.UtcNow,
+            FeePaid = request.FeePaid
+        };
+        _db.Certificates.Add(cert);
+        await _db.SaveChangesAsync();
+
+        // Notify the student.
+        await _notifications.SendAsync(request.StudentId, NotificationType.CertificateAvailable,
+            "Certificate Available",
+            $"Your certificate for \"{evt.Title}\" is now available for download.",
+            relatedEntityId: evt.Id, relatedEntityType: "Event", actionUrl: $"/my-registrations");
+
+        return Ok(ApiResponse.Ok("Certificate uploaded."));
     }
 }

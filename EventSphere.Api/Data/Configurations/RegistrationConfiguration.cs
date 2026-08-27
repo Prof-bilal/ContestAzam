@@ -31,5 +31,8 @@ public class RegistrationConfiguration : IEntityTypeConfiguration<Registration>
 
         builder.HasIndex(r => new { r.EventId, r.StudentId })
             .IsUnique();
+
+        builder.HasIndex(r => r.CheckInToken)
+            .IsUnique();
     }
 }

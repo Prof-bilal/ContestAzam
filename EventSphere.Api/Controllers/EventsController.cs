@@ -18,6 +18,8 @@ public class EventsController : ControllerBase
     private readonly IEngagementService _engagement;
     private readonly AppDbContext _db;
     private readonly UserManager<AppUser> _userManager;
+    private readonly INotificationService _notifications;
+    private readonly IEmailNotificationService _emails;
     private readonly ILogger<EventsController> _logger;
 
     public EventsController(
@@ -25,12 +27,16 @@ public class EventsController : ControllerBase
         IEngagementService engagement,
         AppDbContext db,
         UserManager<AppUser> userManager,
+        INotificationService notifications,
+        IEmailNotificationService emails,
         ILogger<EventsController> logger)
     {
         _eventService = eventService;
         _engagement = engagement;
         _db = db;
         _userManager = userManager;
+        _notifications = notifications;
+        _emails = emails;
         _logger = logger;
     }
 
@@ -41,6 +47,47 @@ public class EventsController : ControllerBase
     }
 
     private bool IsAdmin => User.IsInRole(AppRoles.Admin);
+
+    // ───────────────────────────── Calendar ─────────────────────────────
+
+    /// <summary>Get approved events for the in-app calendar (date range query).</summary>
+    [HttpGet("calendar")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetCalendarEvents([FromQuery] CalendarQueryParams query)
+    {
+        var from = query.FromDate ?? DateTime.UtcNow.Date.AddDays(-DateTime.UtcNow.Date.Day + 1); // first of current month
+        var to = query.ToDate ?? from.AddMonths(1).AddDays(-1); // end of month
+
+        var userId = GetUserId();
+
+        var q = _db.Events
+            .Include(e => e.Category)
+            .Include(e => e.Organizer).ThenInclude(u => u.UserDetails)
+            .Include(e => e.Registrations)
+            .Where(e => e.Status == EventStatus.Approved &&
+                        e.EventDate >= from && e.EventDate <= to)
+            .OrderBy(e => e.EventDate)
+            .ThenBy(e => e.EventTime)
+            .AsQueryable();
+
+        var events = await q.Select(e => new CalendarApiEventDto
+        {
+            Id = e.Id,
+            Title = e.Title,
+            EventDate = e.EventDate,
+            EventTime = e.EventTime,
+            Venue = e.Venue,
+            CategoryName = e.Category.Name,
+            ImageUrl = e.ImageUrl,
+            Status = e.Status.ToString(),
+            RegisteredCount = e.Registrations.Count(r => r.Status == RegistrationStatus.Confirmed),
+            MaxParticipants = e.MaxParticipants,
+            IsRegistered = userId.HasValue &&
+                e.Registrations.Any(r => r.StudentId == userId.Value && r.Status == RegistrationStatus.Confirmed)
+        }).ToListAsync();
+
+        return Ok(ApiResponse<List<CalendarApiEventDto>>.Ok(events));
+    }
 
     // ───────────────────────────── Public Endpoints ─────────────────────────────
 
@@ -242,6 +289,33 @@ public class EventsController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+
+        // Notify the registrant (in-app + email). Email failure never fails the op.
+        var userEmail = user.Email ?? string.Empty;
+        var userName = user.UserDetails?.FullName ?? user.UserName ?? "there";
+        var notificationType = NotificationType.RegistrationConfirmed;
+        await _notifications.SendAsync(userId, notificationType,
+            "Registration Confirmed",
+            $"You successfully registered for {evt.Title}.",
+            relatedEntityId: evt.Id,
+            relatedEntityType: "Event",
+            actionUrl: $"/events/{evt.Id}");
+        await _emails.TrySendRegistrationConfirmedAsync(userEmail, userName, evt.Title, evt.EventDate.Add(evt.EventTime));
+
+        // Notify the organizer that a new attendee registered.
+        var organizer = await _userManager.FindByIdAsync(evt.OrganizerId.ToString());
+        if (organizer is not null && organizer.Id != userId)
+        {
+            await _notifications.SendAsync(organizer.Id, NotificationType.OrganizerRegistration,
+                "New attendee",
+                $"{userName} registered for {evt.Title}.",
+                relatedEntityId: evt.Id,
+                relatedEntityType: "Event",
+                actionUrl: $"/organizer/events/{evt.Id}/attendees");
+            var organizerName = organizer.UserDetails?.FullName ?? organizer.UserName ?? "Organizer";
+            await _emails.TrySendNewAttendeeAsync(organizer.Email ?? string.Empty, organizerName, evt.Title, userName);
+        }
+
         return Ok(ApiResponse.Ok("Successfully registered for the event."));
     }
 
@@ -265,6 +339,21 @@ public class EventsController : ControllerBase
 
         registration.Status = RegistrationStatus.Cancelled;
         await _db.SaveChangesAsync();
+
+        // Notify the user their registration was cancelled.
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+        var evt = await _db.Events.FindAsync(id);
+        if (user is not null && evt is not null)
+        {
+            var name = user.UserDetails?.FullName ?? user.UserName ?? "there";
+            await _notifications.SendAsync(userId, NotificationType.RegistrationCancelled,
+                "Registration Cancelled",
+                $"Your registration for {evt.Title} has been cancelled.",
+                relatedEntityId: evt.Id,
+                relatedEntityType: "Event",
+                actionUrl: $"/events/{evt.Id}");
+            await _emails.TrySendRegistrationCancelledAsync(user.Email ?? string.Empty, name, evt.Title);
+        }
 
         return Ok(ApiResponse.Ok("Registration cancelled."));
     }
